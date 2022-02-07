@@ -1,0 +1,125 @@
+---
+title: "Calling R from SQL Server"
+author: "Steph Locke"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document: 
+    code_folding: show
+    toc: yes
+    toc_float: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Calling R from SQL Server}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+[Home](index.html) | [Prev](SQLServerFromR.html) | [Next](AzureML.html)
+
+## Executing R
+Executing R from SQL Server requires the execution of a stored procedure called `sp_execute_external_script` that takes three main parameters:
+
+- `@language` This gets set to R but isn't isn't it an interesting parameter with lots of possibilities for the future?
+- `@script` This is the R code to be executed
+- `@input_data_1` This is a SQL statement that will produce the starting dataset in R
+
+Unfortunately, the return schema is not inherited by SQL Server so you (ideally) should provide an output specification  via `WITH RESULT SETS`
+```{r}
+library(RODBC)
+#host<-"rmsftdp.northeurope.cloudapp.azure.com"
+host<-"104.45.80.173"
+db<-"AWDW16"
+uname<-"Rdemo"
+pwd<-"tugait"
+connstring<-sprintf("DRIVER={ODBC Driver 11 for SQL Server};Server=%1$s;Database=%2$s;Uid=%3$s;Pwd=%4$s;",host,db,uname,pwd)
+
+conn<-odbcDriverConnect(connstring)
+# convenience function
+sqlServer<-function(sql) sqlQuery(conn, sql)
+```
+
+
+```{r}
+sqlServer(
+"EXECUTE   sp_execute_external_script
+                @language = N'R'
+              , @script = N'OutputDataSet <- InputDataSet'
+              , @input_data_1 = N'SELECT 1 as Col'
+ WITH RESULT SETS ((col int not null))           "
+)
+```
+
+## Overcoming SQL limitations
+R can come in handy when you want to do something but it's really ugly in SQL to achieve. 
+
+For instance, if I had to produce monthly sales figures per reseller with months as columns, I'd have to use a dynamic PIVOT effect in SQL. In R the complexity is much reduced because pivoting is really simple in R
+```{r}
+res<-sqlServer(
+"
+EXECUTE   sp_execute_external_script
+                @language = N'R'
+              , @script = N'
+			  # My preferred tbl manip pkg
+			  library(data.table)
+			  setDT(InputDataSet)
+			  # Pivot!		  
+			  OutputDataSet <- dcast(
+			  InputDataSet[
+			  order(OrderDateKey)
+			  ,.(MonthTotal=sum(SalesAmount) )
+			  ,.(ResellerName,Month= paste0(CalendarYear,\"-\", MonthNumberOfYear)
+			  ) ]
+			  , ResellerName ~ Month)
+			  # Need to add our headers as an extra row to save worrying about specifying them
+			  cols<-as.list(colnames(OutputDataSet))
+			  OutputDataSet<-rbindlist(list(cols,OutputDataSet), use.names=FALSE, fill=FALSE)
+			  '
+			  
+              , @input_data_1 = N'select 
+              r.ResellerName,
+              f.OrderDateKey,
+              d.CalendarYear,
+              d.MonthNumberOfYear,
+              f.SalesAmount
+              from FactResellerSales f
+              inner join DimReseller r on f.ResellerKey=r.ResellerKey
+              inner join DimDate d on d.DateKey=f.OrderDateKey'
+          
+"
+)
+
+knitr::kable(head(res[,1:6]))
+```
+
+## Limitations
+- Output schema not inherited
+- Single table passthrough (both ways)
+- Output must be a data.frame
+
+## Useful links
+[BOL](https://msdn.microsoft.com/en-us/library/mt604845.aspx)
+
+## Exercise
+1. Calculate daily order volumes and totals of SalesAmount from FactResellerSales in SQL
+2. Pass these values into an R query and build a (`lm`) model that predicts daily SalesAmount from daily sales volumes. Return the coefficients.
+
+## Answer
+```{r}
+res<-sqlServer(
+"
+EXECUTE   sp_execute_external_script
+                @language = N'R'
+              , @script = N'
+			  mod<-lm(SalesAmount ~ Volume, InputDataSet)
+			  OutputDataSet<-data.frame(coefficients(mod), names(coefficients(mod)))
+			  ', @input_data_1 = N'select 
+              sum(f.SalesAmount)  as SalesAmount,
+              count(*) as Volume
+              from FactResellerSales f
+              inner join DimReseller r on f.ResellerKey=r.ResellerKey
+              group by OrderDateKey'
+          
+"
+)
+res
+```

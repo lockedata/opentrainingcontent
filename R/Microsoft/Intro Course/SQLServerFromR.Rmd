@@ -1,0 +1,89 @@
+---
+title: "Calling SQL Server from R"
+author: "Steph Locke"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document: 
+    code_folding: show
+    toc: yes
+    toc_float: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Calling SQL Server from R}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+[Home](index.html) | [Prev](DataViz.html) | [Next](RFromSQLServer.html)
+
+
+## Building a connection
+- Need a driver name!
+- Need credentials (you can do trusted AD connections too)
+- Need to store the connection for use
+```{r}
+library(RODBC)
+#host<-"rmsftdp.northeurope.cloudapp.azure.com"
+host<-"104.45.80.173"
+db<-"AWDW16"
+uname<-"Rdemo"
+pwd<-"tugait"
+connstring<-sprintf("DRIVER={ODBC Driver 11 for SQL Server};Server=%1$s;Database=%2$s;Uid=%3$s;Pwd=%4$s;",host,db,uname,pwd)
+
+conn<-odbcDriverConnect(connstring)
+# Test!
+if(conn!=-1L) knitr::kable(sqlTables(conn,schema = "dbo"))
+```
+
+## RODBC functions
+RODBC comes with some built-in functions for working with your database
+```{r eval=FALSE}
+dt<- sqlFetch(conn, "DatabaseLog")
+sqlCopy( conn, "select * from DatabaseLog", "DatabaseLog2")
+sqlSave( conn, dt[1:100,], "DatabaseLog2")
+sqlClear(conn, "DatabaseLog2")
+sqlDrop( conn, "DatabaseLog2")
+```
+
+## SQL
+Use normal SQL statements using `sqlQuery()` - must send one statement at a time to get the results back from each.
+
+```{r}
+dt<- sqlQuery(conn,"
+         SELECT 
+          DatabaseLogID
+          ,DatabaseUser
+          ,Event
+          ,[Schema]
+          ,Object
+          FROM DatabaseLog
+         ")
+knitr::kable(head(dt))
+```
+
+
+```{r}
+str( sqlQuery(conn,"
+        SELECT COUNT(*) as Vol FROM DatabaseLog;
+         SELECT DatabaseLogID FROM DatabaseLog;
+         ")
+)
+```
+
+## Work "at scale"
+Microsoft R Server comes with an additional package `RevoScaleR` that allows you to connect to SQL Server and process very large amounts of data without loading it all into memory. This package is not available in R or Microsoft R Server Open.
+
+Read more about it [Getting Started with RevoScaleR](https://msdn.microsoft.com/en-us/microsoft-r/rserver/rserver-scaler-getting-started)
+
+## Exercise
+1. Return all FactResellerSales data along with the associated Reseller details
+
+## Answer
+```{r}
+sales<- sqlQuery(conn,"
+        SELECT TOP 10 * FROM FactResellerSales f
+        INNER JOIN DimReseller r
+          ON f.resellerkey = r.resellerkey
+         ")
+knitr::kable(head(sales))
+```

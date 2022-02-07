@@ -1,0 +1,130 @@
+---
+title: "Data Visualisation"
+author: "Steph Locke"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document: 
+    code_folding: show
+    number_sections: yes
+    toc: yes
+    toc_float: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Data Visualisation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+[Home](index.html) | [Prev](DataManipulation.html) | [Next](SQLServerFromR.html)
+
+# Base R {.tabset}
+## Intro
+R has built-in graphics capabilities but these take quite a bit of work to get your head around.
+
+## pairs
+Pairs is a pair-wise scatter plot - this is very handy for providing a visual inspection of the data and showing any correlations or clusters of data.
+```{r}
+pairs(iris)
+```
+
+## Diagnostic plots
+some models have methods for producing diagnostic plots for visual inspection.
+```{r}
+plot(lm(Sepal.Length~Petal.Length, iris))
+```
+
+# ggplot2 {.tabset}
+<!-- Source: github.com/stephlocke/Rtraining/inst/handouts/dataviz/chartintro -->
+
+## Glossary
+
+Term | Explanation | Example(s)
+------------- | ------------- | -------------
+**plot** | A plot using the grammar of graphics | `ggplot()`
+**aes**thetics | attributes of the chart | colour, x, y
+mapping | relating a column in your data to an aesthetic  |
+**stat**istical transformation | a translation of the raw data into a refined summary | `stat_density()`
+**geom**etry | the display of aesthetics | `geom_line()`, `geom_bar()`
+**scale** | the range of values | axes, legends
+**coord**inate system|  how geometries get laid out | `coord_flip()`
+**facet** | a means of subsetting the chart | `facet_grid()`
+**theme** | display properties | `theme_minimal()`
+
+
+## Charts - step by step
+
+ 1. Create the base plot (doesn't work on it's own)
+```{r, echo=TRUE,eval=TRUE,warning=FALSE}
+library(ggplot2)
+
+p <- ggplot(data=iris)
+```
+
+ 2. Add aesthetic mappings (doesn't work on it's own)
+```{r, echo=TRUE,eval=TRUE}
+p <- ggplot(data=iris, aes(x=Sepal.Width, y=Sepal.Length, colour=Species))
+```
+
+ 3. Add a geometry
+```{r, echo=TRUE,eval=TRUE}
+p <- p + geom_point()
+p
+```
+
+ 4. (Optional) Add a statistic
+ 
+```{r, echo=TRUE,eval=TRUE}
+p <- p + stat_boxplot(fill="transparent")
+p
+```
+
+ 5. (Optional) Alter coordinate system
+ 
+```{r, echo=TRUE,eval=TRUE}
+p <- p + coord_flip()
+p
+```
+
+ 6. (Optional) Facet the chart
+ 
+```{r, echo=TRUE,eval=TRUE}
+p <- p + facet_grid(.~Species)
+p
+```
+
+ 7. (Optional) Amend look and feel
+
+```{r, echo=TRUE,eval=TRUE}
+p <- p + theme_minimal()
+p
+```
+
+## Constructing a chart - a one-step process
+```{r, echo=TRUE,eval=TRUE}
+ggplot(data=iris, aes(x=Sepal.Width, y=Sepal.Length, colour=Species)) + 
+  geom_point() +
+  stat_boxplot(fill="transparent") +
+  # coord_flip() + # Commented out
+  facet_grid(.~Species) +
+  theme_minimal()
+
+```
+
+## Exercises
+1. Construct a chart showing a histogram of `iris$Sepal.Width` split by species
+
+## Answers
+```{r}
+library(ggplot2)
+ggplot(iris,aes(x=Sepal.Width))+
+  geom_histogram()+
+  facet_wrap(~Species)
+```
+
+## More resources
+
+ - Hadley's documentation is top notch so check out the [ggplot2 documentation](http://docs.ggplot2.org/current/)
+ - View the [source code](https://github.com/hadley/ggplot2-book) for Hadley's [ggplot2 book](http://www.amazon.co.uk/ggplot2-Elegant-Graphics-Data-Analysis/dp/0387981403/ref=asap_bc?ie=UTF8)
+ - The online [R graphics cookbook](http://www.cookbook-r.com/Graphs/)
+ - A [ggplot2 cheatsheet](http://zevross.com/blog/2014/08/04/beautiful-plotting-in-r-a-ggplot2-cheatsheet-3/) blog post
+ - [Plot.ly library](https://plot.ly/ggplot2/)

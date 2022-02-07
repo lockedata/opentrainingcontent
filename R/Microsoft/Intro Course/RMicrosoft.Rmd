@@ -1,0 +1,127 @@
+---
+title: "R and Microsoft"
+author: "Steph Locke"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{R and Microsoft}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+[Home](index.html) | [Prev](index.html) | [Next](GettingStarted.html)
+
+
+# R
+> R is an integrated suite of software facilities for data manipulation, calculation and graphical display
+
+- Open source
+- In-memory & single-core (by default)
+- Multi-platform
+- Extensible environment
+- Delivered by the [R Foundation](https://www.r-project.org/foundation/), supported by the [R Consortium](https://www.r-consortium.org/), grown by R developers 
+- [r-project.org](http://www.r-project.org/)
+
+## There's a package for that
+- R is extended with packages of functionality
+- More than 8,000 active packages according to [MetaCRAN](http://www.r-pkg.org/)
+- [Comprehensive R Archive Network (CRAN)](https://cran.r-project.org/)
+- [Github](https://github.com) via [devtools](https://cran.r-project.org/package=devtools)
+
+## How it hangs together
+```{r,echo=FALSE,warning=FALSE}
+library(DiagrammeR)
+hangs<-"graph TB
+subgraph High Level
+D[Data] --> R[Read into memory]
+R --> DM[Data manipulation]
+DM --> V[Visualisation]
+DM --> S[Statistical Analysis]
+DM --> O[Output]
+S --> V
+V --> Do[Document]
+Do --> O
+V --> I[Interactive report]
+I --> O
+S --> W[Webservice]
+W --> I
+W --> O
+end
+subgraph Package View
+Dp[RDBMS, flat file, nosql, xml] --> Rp[data.table, RODBC, httr, rvest, readxl, readr,...]
+Rp --> DMp[data.table, dplyr, zoo, lubridate, stringr, ...]
+DMp --> Vp[ggplot2, DiagrammeR, vegalite, ...]
+DMp --> Sp[caret, survival, nnet, ...]
+DMp --> Op[base, readr, RODBC, ...]
+Sp --> Vp
+Vp --> Dop[knitr, rmarkdown, ...]
+Dop --> Op
+Vp --> Ip[shiny, ...]
+Ip --> Op
+Sp --> Wp[AzureML, jug, ...]
+Wp --> Ip
+Wp --> Op
+end"
+mermaid(hangs)
+```
+
+# Microsoft Data Platform
+
+## How it hangs together
+```{r,echo=FALSE,warning=FALSE}
+library(DiagrammeR)
+hangs<-"graph TB
+subgraph High Level
+D[Data] --> R[ETL]
+R --> DM[Database]
+DM --> S[Cube]
+DM --> I[Itneractive reports]
+DM --> Do[Static reports]
+DM --> W[Webservices]
+DM --> O[Output]
+S --> I
+S --> Do
+S --> O
+I --> O
+Do --> O
+W --> I
+W --> O
+end
+subgraph Software View
+Dm[Data] --> Rm[SSIS, Data Factory]
+Rm --> DMm[SQL Server, Azure SQL]
+DMm --> Sm[SSAS]
+DMm --> Im[PowerBI]
+DMm --> Dom[SSRS]
+DMm --> Wm[AzureML]
+DMm --> Om[Output]
+Sm --> Im
+Sm --> Dom
+Sm --> Om
+Im --> Om
+Dom --> Om
+Wm --> Im
+Wm --> Om
+Wm --> Om
+end"
+mermaid(hangs)
+```
+
+# R + Microsoft
+## Microsoft R Server
+- Previously, Revolution R for Enterprise
+- Available on Windows and Linux
+- Specialised connectors available for SQL Server, Hadoop, Oracle, & Teradata
+
+## AzureML
+- Uses R throughout
+
+## PowerBI
+- R as a data source
+- Use R for data visualisations
+- Any R variant
+
+## SQL Server
+- Call R from inside SQL
+
+-------
+[Home](index.html) | [Prev](index.html) | [Next](GettingStarted.html)

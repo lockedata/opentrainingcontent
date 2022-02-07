@@ -1,0 +1,31 @@
+---
+title: "R in the Microsoft Data Platform - outline"
+author: "Steph Locke & Andrew Fryer"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Outline}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+The SQL Server BI world has been kind of static for a long time, now they’re bringing out a funky new platform and they’re putting R everywhere. This hands-on pre-con will take you through the fundamentals of working with R and then show how it can easily be integrated into the Microsoft stack.
+
+## Contents
+- [R + Microsoft](RMicrosoft.html)
+- [Getting started with R](GettingStarted.html)
+- [Data manipulation fundamentals](DataManipulation.html)
+- [Data visualisation basics](DataViz.html)
+- [Getting data from SQL Server into R](SQLServerFromR.html)
+- [Using R in SQL Server](RFromSQLServer.html)
+- [Making predictions with R & Azure ML](AzureML.html)
+- High end dashboards with PowerBI & R
+
+## Objectives
+- Knowing enough R to comfortably do basic data analysis
+- Understand how R impacts the new Data Platform
+- Practical experience of working with R in the Data Platform
+
+## Prerequisites
+Attendees should be comfortable writing SQL and will ideally having coded a bit in other languages previously. Attendees will need a laptop with the necessary software installed. They should follow the [installation instructions](Installation.html) to get everything configured.

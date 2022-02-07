@@ -1,0 +1,235 @@
+---
+title: "Getting started with R"
+author: "Steph Locke"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document: 
+    code_folding: show
+    number_sections: yes
+    toc: yes
+    toc_float: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Getting started with R}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+[Home](index.html) | [Prev](RMicrosoft.html) | [Next](DataManipulation.html)
+
+# R Syntax {.tabset}
+Key syntax and operators.
+
+<!-- Source: github.com/stephlocke/Rtraining/inst/handouts/fundamentals/syntax -->
+## Basic operators
+
+Action | Operator | Example
+------------- | ------------- | -------------
+Subtract | - | `5 - 4` = `r 5 - 4`
+Add | + | `5 + 4` = `r 5 + 4`
+Multiply | * | `5 * 4` = `r 5 * 4`
+Divide | / | `5 / 4` = `r 5 / 4`
+Raise to the power | ^ | `5 ^ 4` = `r 5 ^ 4`
+Modulus | %% | `9 %% 4` = `r 9 %% 4`
+Integer division | %/% | `9 %/% 4` = `r 9 %/% 4`
+Basic sequence | : | `1:3` = `r 1:3`
+
+## Comparison operators
+
+Action | Operator | Example
+------------- | ------------- | -------------
+Less than | < | `5 < 5` = `r 5 < 5`
+Less than or equal to | <= | `5 <= 5` = `r 5 <= 5`
+Greater than | > | `5 > 5` = `r 5 > 5`
+Greater than or equal to | >= | `5 >= 5` = `r 5 >= 5`
+Equal | all.equal() | `all.equal(0.5 - 0.3,0.3 - 0.1)` is `r all.equal(0.5 - 0.3,0.3 - 0.1)`
+Exactly equal | == | `(0.5 - 0.3) == (0.3 - 0.1)` is `r (0.5 - 0.3) == (0.3 - 0.1)`, 2 == 2 is `r 2==2`
+Not equal | != | `(0.5 - 0.3) != (0.3 - 0.1)` is `r (0.5 - 0.3) != (0.3 - 0.1)`, 2 != 2 is `r 2!=2`
+
+## States
+
+States | Representation  
+------------- | -------------
+True | `TRUE` `1`
+False | `FALSE` `0`
+Empty | `NULL`
+Unknown | `NA`
+Not a number e.g. `0/0`| `NaN`
+Infinite e.g. `1/0` | `Inf`
+
+## Logical operators
+
+Action | Operator | Example
+------------- | ------------- | -------------
+Not | ! | `!TRUE` is `r !TRUE`
+And | & | `TRUE & FALSE` is `r TRUE & FALSE`, `c(TRUE,TRUE) & c(FALSE,TRUE)` is `r c(TRUE,TRUE) & c(FALSE,TRUE)`
+Or | `|` | `TRUE | FALSE` is `r TRUE | FALSE`, `c(TRUE,FALSE) | c(FALSE,FALSE)` is `r c(TRUE,FALSE) | c(FALSE,FALSE)`
+Xor | xor() | `xor(TRUE,FALSE)` is `r xor(TRUE,FALSE)`
+Bitwise And | && | `c(TRUE,TRUE) && c(FALSE,TRUE)` is `r c(TRUE,TRUE) && c(FALSE,TRUE)`
+Bitwise Or | `||` | `c(TRUE,FALSE) || c(FALSE,FALSE)` is `r c(TRUE,FALSE) || c(FALSE,FALSE)`
+In | %in% | `"Red" %in% c("Blue","Red")` is `r  "Red" %in% c("Blue","Red")`
+Not in | !( x %in% y)  | `!("Red" %in% c("Blue","Red"))` = `r !("Red" %in% c("Blue","Red"))`
+
+
+
+## Control constructs
+
+Type | Implementation | Example
+------------- | ------------- | -------------
+If | if(condition) {dosomething} | `if(TRUE) { 2 }` is `r if(TRUE) { 2 }`
+If else | if(condition) {do something} else {do something different} or ifelse(condition, do something, do something else) | `if(FALSE) { 2 } else { 3 }` is `r if(FALSE) { 2 } else { 3 }` `ifelse(FALSE, 2, 3)` is `r ifelse(FALSE, 2, 3)`
+For loop | for(i in seq) {dosomething} or foreach(i=1:3) %do% {something} | `for(i in 1:3) {print(i)}` is `r paste0(1:3)` 
+While loop | while(condition) {do something } | `a<-0 ; while(a<3){a<-a+1} ; a` is `r a<-0 ; while(a<3){a<-a+1} ; a`
+Switch | switch(value, ...) | `switch(2, "a", "b")` is `r switch(2, "a", "b")`
+Case | memisc::cases(...) | `cases("pi<3"=pi<3, "pi=3"=pi==3,"pi>3"=pi>3)` is `r memisc::cases("pi<3"=pi<3, "pi=3"=pi==3,"pi>3"=pi>3)`
+
+> NB: If you find yourself using a loop, there's probably a better, faster solution
+
+## Assignment operators
+
+Action | Operator | Example
+------------- | ------------- | -------------
+Create / update a variable | <- | `a <- 10`
+
+> NB: There are others you could use, but this is the best practice
+
+## Accessors
+
+Action | Operator | Example
+------------- | ------------- | -------------
+Use public function from package | :: | `memisc::cases()`
+Use private function from package | ::: | `optiRum:::pounds_format()`
+Get a component e.g a data.frame column | $ | `iris$Sepal.Length`
+Extract a property from a class | `@` | *Won't be used in this course*
+Refer to positions in a data.frame or vector | [ ] | `iris[5:10,1]`
+Refer to item in a list | [[ ]] | `list(iris=iris,mtcars=mtcars)[["iris"]]`
+
+## Meta-operators
+
+Action | Operator | Example
+------------- | ------------- | -------------
+Comment | # | `# This is my comment`
+Help | ? | `?data.table`
+Identifier | \` |  `` `1`<-2``
+
+## Exercises
+1. Create a variable called `Scores` that holds the numbers 1 to 10
+1. Return whether each number in Scores is an even number
+1. Get the help text for the function `mean`
+1. Perform a test to see if R variable names are case sensitive
+
+## Answers
+
+```{r error=TRUE}
+#1
+Scores<-1:10
+#2
+(Scores %% 2) ==0
+#3
+#?mean
+#4
+scores
+```
+
+# R Data types & structures {.tabset}
+<!-- Source: github.com/stephlocke/Rtraining/inst/handouts/fundamentals/datatypes -->
+A brief introduction to data structures and types 
+
+## Data types
+These are the core data types. There are additonal ones like dates with timestamps(`POSIXct` and `POSIXlt`) and ordered factors
+
+Data type | Example
+------------- | -------------
+Integer | 1
+Logical | TRUE
+Numeric | 1.1
+String / character  | "Red"
+Factor (enumerated string) | "Amber" or 2 in c("Red","Amber","Green")
+Complex | i
+Date | "`r Sys.Date()`"
+
+## Data structures
+These are the out of the box data structures. There are other data structure that use these as the basis like data.table or a time-series object.
+
+Data type | Info | Construction example(s)
+------------- | ------------- | -------------
+Vector | A 1D set of values of the same data type | c(1,"a") , 1:3 , LETTERS
+Matrix | A 2D set of values of the same data type | matrix(LETTERS,nrow=13, ncol=2) , rbind(1:5,2:6)
+Array | An nD set of values of the same data type | array(LETTERS, c(13,2))
+Data.frame  | A 2D set of values of different data types | data.frame(a=1:26, b=LETTERS)
+List | A collection of objects of various data types | list(vector=c(1,"a"), df=data.frame(a=1:6))
+Classes | A class is like a formalised list and can also contain functions i.e. methods | *Won't be covered in this class*
+
+
+## Exercises
+1. Make a variable called `ID` containing the numbers 1 to 52
+1. Make a variable called `category` holding 52 randomly selected letters (using `sample`)
+1. Make a variable called `records` that is a data.frame containing `ID` and `category`
+
+## Answers
+```{r }
+#1
+ID<-1:52
+#2
+category<-sample(LETTERS,52, replace=TRUE)
+#3
+records<-data.frame(ID,category)
+head(records)
+```
+
+
+# R Functions {.tabset}
+## Using functions
+- Use an argument's position for well known functions e.g. `sum(iris$Sepal.Width)`
+- Use argument names for less well known functions (or less common arguments) e.g. `seq(from=1, to=5, by=1)`
+- Use argument names to call arguments out of order e.g.`seq(by=1, from=1, to=5 )`
+- Get help for a function that's in a loaded package with `?` e.g. `?mean`
+- Get help for a function that's not loaded with `??` e.g. `??adist`
+- Search for text or a function in the help with `help.search()` e.g. `help.search("concat")`
+- Get the definition of a function by calling it without brackets e.g. `Sys.Date`
+
+## Functions can ...
+- have named arguments e.g. `ifelse(test, yes, no)`
+- take any number of arguments e.g. `mean(...)`
+- take a combination of named and unlimited arguments e.g. `seq.int(from, to, by, length.out, along.with, ...)`
+- act as operators e.g. `+`,`%%`,`%>%`
+- work as you'd would normally expect e.g. `mean(iris$Sepal.Width)`
+- return functions e.g. `scales::gradient_n_pal`
+- have side-effects like making a plot and also returning some data
+
+
+## Basic function writing
+- Functions are created with the syntax `function(args){code}`
+- Functions do not need to be stored to be used
+- Store a function with `myfunc<-function(args){code}`
+- Functions will usually output whatever object was last called but not stored `f<-function(){1}; f()`
+- Use the `return()` function to output something specific `f<-function(){return(1)}; f()`
+- Make an argument optional by providing it with a default value or NULL
+
+```r
+myfunc<-function(arg1, arg2=NULL){
+print(arg1)
+if(!is.null(arg2)) return(arg2)
+}
+```
+
+## Exercises
+1. Use the function `cut()` to produce split `floor(rnorm(n = 100, mean=50,sd=20))` into 5 bins with numbers representing the bins they were allocated
+1. Write a function that says "Hello world" or says hello to any string or number passed in (use `paste`)
+
+## Answers
+```{r}
+#1
+nums<-floor(rnorm(n = 100, mean=50,sd=20))
+bins<-cut(nums, breaks=5, labels=FALSE)
+
+#2
+hello<-function(x=NULL){
+  if(is.null(x)) x<-"world"
+  res<-paste0("Hello ", x, "!")
+  return(res)
+}
+hello()
+hello("Dave")
+hello(c("Dave","Jane", "7"))
+```

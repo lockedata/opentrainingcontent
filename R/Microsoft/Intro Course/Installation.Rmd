@@ -1,0 +1,88 @@
+---
+title: "Installation Instructions"
+author: "Steph Locke"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document: 
+    code_folding: show
+    number_sections: yes
+    toc: yes
+    toc_float: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Installation Instructions}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+[Home](index.html) | [Prev](RMicrosoft.html) | [Next](GettingStarted.html)
+
+
+# Data Science VM {.tabset}
+This is an optinal way of getting most things configured for use.
+
+## Intro
+Using either an existing subscription, a trial, or a voucher, we'll need a Microsoft Data Science Virtual Machine.
+
+- There are Windows and Linux variants - use your preferred option!
+
+## Provision the VM
+In [Azure Portal](http://portal.azure.com):
+1. Hit `New`
+2. Seach for `data science`
+3. Select the Data Science Virtual Machine
+4. You can do a *Next, Next, Next* install but you may wish to:
+   + Give the VM a sensible name
+   + Use security best practices like a strong password
+   + Base the VM in Northern Europe
+   + Use an A3 size (don't forget to turn it off or downsize after)
+
+## Configure the VM
+Use the `Connect` option on the portal to get an RDP connection to the VM
+
+- Disable Enhanced Security by going to Server Manager > Local Server > IE Enhanced Security
+- Install RStudio
+- Using either Visual Studio 2015 Community Edition or RStudio, install the `devtools` package
+
+# Installation instructions {.tabset}
+<!-- Source: github.com/stephlocke/Rtraining/inst/handouts/infrastructure/setting-up-a-windows-r-machine -->
+This section outlines general installation notes that should be followed when configuring an R environment. The data science VM generally precludes their necessity.
+
+## ODBC Driver
+Get the relevant [SQL Server ODBC 11 Preview](https://blogs.msdn.microsoft.com/joseph_idzioreks_blog/2015/09/13/azure-sql-database-sqlcmd-and-bcp-on-ubuntu-linux/) driver for your OS and install it. You can use the native driver as it's ODBC compatible but amendments to connection strings in the training material will be required.
+
+## R
+ * Download latest base R exe file from [cran.rstudio.com](http://cran.rstudio.com/)
+ * Also download Rtools latest exe (if using Windows)
+ * Install R then Rtools - if 64bit, install both 32 and 64 as it saves you hassle with other drivers
+
+## Git
+ * Download latest git version from [msysgit.github.io](https://msysgit.github.io/)
+ * Install
+ * Open up command-prompt
+     + Run `git config --global user.name="Your name"`
+     + Run `git config --global user.email="email@addre.ss"`
+
+## Use Rstudio
+ * Go to [rstudio.com](http://www.rstudio.com/products/rstudio/download/)
+ * Select correct install file for your PC, and install
+ * Open Rstudio
+ * Go to Tools > Global Options and set Rstudio to point at the location of your git.exe file
+ * Restart Rstudio
+     + If you don't automatically get the Git pane (top RHS) then Create a New Project and tick the source control checkbox
+ * Go to the Packages area (bottom RHS) and select Install. Install `devtools`
+
+
+
+# The RMSFTDP package {.tabset}
+
+## Purpose
+This section introduces the package R in the Microsoft Data Platform, or **RMSFTDP** for short.
+
+## Get it 
+ * Open RStudio
+ * Get the project from source control by going to New Project in Rstudio, selecting from version control, and pasting in the URL `https://github.com/stephlocke/RMSFTDP.git`
+ * Run `devtools::install()` to install the package
+
+## Contents
+ * `vignettes/` - use `devtools::build_vignettes()` to generate a local copy of the training materials

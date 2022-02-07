@@ -1,0 +1,318 @@
+---
+title: "Data Manipulation"
+author: "Steph Locke"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document: 
+    code_folding: show
+    number_sections: yes
+    toc: yes
+    toc_float: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Data Manipulation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+[Home](index.html) | [Prev](GettingStarted.html) | [Next](DataViz.html)
+
+# Working with vectors {.tabset}
+## Intro
+Vectors are the building blocks of R. They are 1D arrays that contain data of all the same type - so coercion of data types happens.
+
+- R is a 1-based array system so a vector starts at position 1
+- Items in a vector can have names but can also be referred to by position
+
+## Create
+You can create vectors using the `c()` function or via a sequence (`:`). Values in a vector can be given names - this can be useful when subsetting values.
+```{r}
+handCrafted<-c(1,2,3,4)
+seqCrafted<-1:4
+named<-c(a=1,b=2,c=3,d=4)
+named
+```
+
+
+## Filter
+Alternatively called subsetting, we can filter a vector by using positive notations of position, negative notations of position, the name of a value, or providing a boolean value for each item in the vector.
+```{r}
+handCrafted[1]
+seqCrafted[-1]
+named["b"]
+
+handCrafted[c(rep(TRUE,3),FALSE)]
+```
+
+## Update
+You can update one or more values in a vector by assigning the new values into the desired subset.
+```{r}
+handCrafted
+handCrafted[2]<-99
+handCrafted
+
+named
+named["a"]<-99
+named
+
+# Delete by subsetting without value
+seqCrafted
+seqCrafted<-seqCrafted[-4]
+seqCrafted
+
+# Append by creating a vector combining the original and the additional values
+ordered
+ordered<-c(ordered,5)
+ordered
+```
+
+## Manipulate
+You can manipulate a vector using functions. You can overwrite any object created - this will change mode, class, etc as R is **loosely typed** and doesn't require such things to be specified and fixed up front.
+```{r}
+mode(seqCrafted)
+seqCrafted<-as.character(seqCrafted)
+mode(seqCrafted)
+```
+
+## Order
+Ordering of records works by providing the position numbers of values in a vector and then using those to produce a vector with the original components in new locations
+```{r}
+preOrder<-sample(letters, 6)
+preOrder
+
+# Get order the values should appear in to be alphabetised
+order(preOrder)
+
+# Use it to sort a vector
+ordered<-preOrder[order(preOrder)]
+ordered
+
+# Alternatively, use the sort() function for brevity
+sorted<-sort(preOrder)
+sorted
+```
+
+## Metadata
+You can extract various pieces of information about a vector
+```{r}
+names(handCrafted)
+names(named)
+
+dim(named)
+dimnames(named)
+
+length(named)
+class(named)
+mode(named)
+
+attributes(named)
+str(named)
+```
+
+## Exercises
+1. Create a vector containing upper case and lower case variants of the alphabet
+1. Create a new vector with a random sample of your new letter vector
+1. Filter out any lowercase letters
+
+## Answers
+```{r}
+#1
+lets<-c(LETTERS,letters)
+#2
+lets<-sample(lets,50)
+#3
+lets<-lets[tolower(lets)!=lets]
+lets
+```
+
+# Working with lists {.tabset}
+## Intro
+Lists hold multiple objects together and form the basis of complex data objects like data.frames and model results.
+
+
+## Create
+You can create lists using the `list()` function or via a sequence (`:`). Objects in a list can be given names.
+```{r}
+basicList<-list(c(1,2,3,4),LETTERS[5:8], rnorm(5))
+namedList<-list(p1=c(1,2,3,4),p2=LETTERS[5:8])
+```
+
+
+## Filter
+Alternatively called subsetting, we can filter a list by using positive notations of position, negative notations of position, or the name of a element, or providing a boolean value for each item in the list. We can also use `list[[ "elementname" ]]` or `list$elementname for specifically detailing a *single element*. 
+```{r error=TRUE}
+basicList[1]
+basicList[-1]
+namedList["p2"]
+basicList[c(TRUE,FALSE)]
+
+basicList[[1]]
+basicList[[-1]]
+namedList[["p2"]]
+namedList$p2
+basicList[[c(TRUE,TRUE)]]
+```
+
+## Update
+You can update one or more objects in a list by assigning the new values into the desired object using the same subsetting capabilities as noted in the Filter section.
+```{r}
+basicList[[1]]<-8:12
+basicList[1]
+
+# Elements in a list can be removed by making them NULL
+basicList[2]
+basicList[2]<-NULL
+basicList[2]
+
+# Append by creating a list combining the original and the additional values
+basicList[[3]]<-LETTERS[5:8]
+```
+
+## Manipulate
+You can manipulate a list using functions, and also manipulate the objects stored in the list.
+```{r}
+lapply(basicList,mode)
+```
+
+## Order
+Ordering of objects in a list is rarely required but you can do it with the `order()` function.
+```{r}
+unorderedList<-list(p2=c(1,2,3,4),p1=LETTERS[5:8])
+unorderedList[order(names(unorderedList))]
+```
+
+## Metadata
+You can extract various pieces of information about a list
+```{r}
+names(basicList)
+names(namedList)
+
+dim(namedList)
+dimnames(namedList)
+
+length(namedList)
+class(namedList)
+mode(namedList)
+attributes(namedList)
+str(namedList)
+```
+
+## Exercise
+Create a linear regression model (`lm()`) for the iris dataset and extract the `fitted.values` element
+
+## Answers
+```{r}
+irisLM<-lm(Sepal.Width~Sepal.Length, iris)
+head(irisLM$fitted.values)
+```
+
+# Working with tables {.tabset}
+## Intro
+Tables or data.frame's as the base structure is called in R can hold multiple columns of different data types. Normally, [data.table](https://cran.r-project.org/package=data.table) or [dplyr](https://cran.r-project.org/package=dplyr) would be taught to super-charge data.frames (see Steph's extended session "Cut the R learning curve" for more on these) but to reduce dependencies and make it easier to transfer code between different systems, we'll use just base R.
+
+- data.frames have a coordinate system like excel so `df[ 1 , 2 ]` selects the intersection of row 1 and column 2
+- Rows and columns can be referenced by name
+- A data.frame is actuallly a list that is presented like a table
+
+## Create
+You can create data.frames using the `data.frame()` function. 
+
+- `data.frame()` will error if you try storing something odd in it. Use `as.data.frame()` to coerce
+```{r}
+df<-data.frame(a=1:4, b=LETTERS[5:8], c=rnorm(4),row.names = letters[9:12])
+df
+```
+
+
+## Filter
+Alternatively called subsetting, we can filter a data.frame by using positive notations of position, negative notations of position, or the name of a element, or providing a boolean value for each item in the list. 
+
+To filter using a condition requires the creation of a boolean vector based on a specific column. columns can be treated as vectors by using `df$colname`
+```{r}
+df[1, ]
+df[ ,1]
+df[1,1]
+df[-(3:4),]
+df[,"a"]
+df[ , c(TRUE, TRUE, FALSE)]
+df[df$a<4,]
+```
+
+## Update
+You can update values in a data.frame by referencing it's position using the same subsetting capabilities as noted in the Filter section.
+```{r}
+df[1,1]<-2
+df
+
+# Columns in a data.frame can be removed by making them NULL
+df[,2]
+df[,2]<-NULL
+df[,2]
+
+# Rows in a data.frame can be removed by subsetting without them
+df[2,]
+df<-df[-2,]
+df[2,]
+
+# Appends can happen in a variety of ways
+superDF<-data.frame(df,d=5:7)
+superDF
+df$newcol<-5:7
+df
+df[4,]<-c(1,1,1)
+df
+```
+<!--
+
+## Manipulate
+You can manipulate a data.frames using functions, and also manipulate the columns in the data.frame
+```{r}
+lapply(basicList,mode)
+```
+-->
+
+## Order
+Ordering of data.frames works by providing the position numbers of row numbers in a vector and then using these to return data.frame rows in a specific order
+```{r}
+# Get order the values should appear in
+order(df$c)
+
+# Use it to sort a table
+ordered<-df[order(df$c),]
+ordered
+```
+
+## Metadata
+You can extract various pieces of information about a list
+```{r}
+names(df)
+
+dim(df)
+dimnames(df)
+
+length(df)
+class(df)
+mode(df)
+attributes(df)
+str(df)
+```
+
+## Exercises
+1. Make a copy of the `iris` dataset to play with
+1. Add a column with the estimated area of the sepals
+1. Filter out any record with a petal width lower than average
+1. Sort by species name in descending order
+
+## Answers
+```{r}
+#1 
+myIris<-iris
+#2
+myIris$Sepal.Area<-myIris$Sepal.Width * myIris$Sepal.Length
+#3
+avg<-mean(myIris$Petal.Width)
+myIris<-myIris[myIris$Petal.Width>=avg,]
+#4
+myIris<-myIris[order(myIris$Species,decreasing = TRUE),]
+head(myIris)
+```

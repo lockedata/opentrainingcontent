@@ -1,0 +1,36 @@
+---
+title: "AzureML"
+author: "Steph Locke"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document: 
+    code_folding: show
+    toc: yes
+    toc_float: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{AzureML}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+[Home](index.html) | [Prev](RFromSQLServer.html) | [Next](PowerBI.html)
+
+# Overview
+** TRY FOR FREE! [Main site](https://studio.azureml.net/) **
+
+AzureML is a GUI for developing statistical models and then exposing them via an API for applications to interact with. Additionally, there is now a notebook facility for making interactive analyses.
+
+AzureML can use "off-the-shelf" modules, R code and custom packages, and Python so it's really extensible.
+![AzureML Poster](https://raw.githubusercontent.com/stephlocke/lazyCDN/master/AzureMLPoster.png)
+
+# Building models
+![](https://raw.githubusercontent.com/stephlocke/lazyCDN/master/azureML.png)
+
+- Use pre-existing data to develop a model
+- `Import Data` does not connect to a SQL Server - need to use zipped data
+- Right-click on circles at the bottom of a GUI object to get to the visualise section
+
+
+# Useful links
+[Main site](https://studio.azureml.net/)
