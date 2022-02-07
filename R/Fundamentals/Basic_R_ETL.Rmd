@@ -1,0 +1,348 @@
+# (PART) Extract, Transform, Load (ETL) {-}
+
+# Extract aka Data import
+
+There are many packages you can use to extract data from different sources. You can also write your own package with connections, default transformations, and so on to enable reusable modules of code.
+
+R has sophisticated error handling capabilities so that you can create flows for email notifications, writing out erroneous data, and flagging problem rows.
+
+Some R packages that you might need are:
+
+- `DBI` A general database interface that other DB-specific packages hook into
+- `odbc` Working with ODBC sources like SQL Server
+- `dbplyr` Simplify interactions with databases and other sources
+- `jsonlite` Consuming JSON
+- `xml2` Ingesting XML
+- `httr` Consuming APIs
+- `haven` Data sources like SAS, SPSS, and Matlab
+- `readr` Read flat files
+- `readxl` Read Excel spreadsheets
+- `googlesheets` Consume onlien Google Sheets
+- `tabulizer` Extract information from PDF
+
+## Reading CSVs
+
+We can do basic CSV reads using the `read_csv()` function from `readr`.
+
+```{r simpleread}
+"../data/lego-database/colors.csv" %>% 
+  read_csv() ->
+  colours
+```
+
+It's possible to heavily customise data ingestion with optional arguments.
+
+```{r complexcsv}
+file = "../data/lego-database/colors.csv" 
+colnames = c("ID","NAME","HEX","TRANSPARENT")
+datatypes = cols(ID=col_integer(), .default= col_character())
+headerrows = 1
+
+file %>% 
+  read_csv(col_names = colnames,
+           col_types = datatypes,
+           skip = headerrows) ->
+  colours2
+```
+
+CSV reading is pretty fast, we can run benchmarks to check for our workloads how long we might expect them to run for.
+
+```{r benchmark, message=FALSE}
+file = "../data/world-development-indicators/indicators.csv"
+file.size(file)/1024^2 #megabytes
+
+summary(
+microbenchmark::microbenchmark(
+  readr::read_csv(file, progress=FALSE),
+  times=3
+)
+)
+```
+
+## Ingesting multiple files
+
+```{r  bulkreadprepsetup, echo=FALSE}
+dir = "example/big-read"
+dir.create(dir, recursive = TRUE)
+
+library(data.table)
+file %>% 
+  fread() %>% 
+  split(by="CountryCode") %>% 
+  map(~fwrite(.,
+      file.path(dir,paste0( unique(.$CountryCode),".csv"))))
+```
+
+A common requirement for ingesting data is to ingest multiple files at once.
+
+We need to identify the files we want to read, then use the appropriate ingestion function. If we want to consolidate all the data into one dataset, we can use `map_df()` (as opposed to the usual `map()`). 
+```{r bulkread, message=FALSE}
+dir %>% 
+  list.files("*.csv", full.names = TRUE) %>% 
+  map_df(read_csv) %>% 
+  nrow()
+```
+
+`map_df()` also gives us options on how to handle column names that vary. It'll consolidate data on name, not by position.
+
+
+
+## DB connectivity
+> Note, this section uses sqlite for easy offline work.
+
+
+
+```{r dbconn}
+db = "../data/world-development-indicators/database.sqlite"
+
+library(DBI)
+mydb<-dbConnect(RSQLite::SQLite(), db)
+dbListTables(mydb)
+```
+
+Using `dbplyr`, we're able to work with connections to specific tables in our database. This allows us to write R that gets translated to SQL and executed on the server. 
+
+```{r dbplyrdemo, eval=FALSE}
+library(dbplyr)
+mydb %>% 
+  tbl("Country") %>% 
+  filter(Region=="South Asia") 
+```
+
+## Exercises
+1. Load a CSV into memory
+2. Connect to a database and use `dbGetQuery` to query it
+
+# Data transformation
+Working with data in memory means that R can be really quick to do different tasks. There's definitely areas where you should use SQL, but R can often be faster than SSIS for tasks.
+
+Using R rather than SSIS for tasks makes it a lot easier to work with your ETL as code. It's clearer exactly what's happened and can be built into reusable modules.
+
+Useful R packages for transforming data include:
+
+- `tidyverse` (dplyr, purr, stringr, forcats, lubridate) for general data manipulation and transformation
+- `tidytext` for working with text to perform NLP type tasks
+- `fuzzyjoin` for approximate joins
+- `anytime` for handling date strings that can be variable
+- `glue` for constructing statemetns and strings
+- `iptools` and `urltools` for working with URL data
+
+## Common tasks
+When we're working with data, we might need to standardise names. Using `rename_all()` you're able to programatically apply a cleaning function to every column header.
+```{r standardisenames}
+file %>% 
+  read_csv(progress = FALSE) %>% 
+  rename_all(tolower) %>% 
+  names()
+```
+
+Pivoting and unpivoting data has historically been very painful! The `tidyr` package makes it a breeze.
+
+```{r reshapedata}
+file %>% 
+  read_csv(progress = FALSE) %>% 
+  filter(IndicatorCode=="SP.ADO.TFRT") %>% 
+  spread(Year, Value) 
+```
+
+R can help us in cases where values might slghtly differ between datasets. The `fuzzyjoin` package offers a number of approximate join techniques for working with text columns.
+
+```{r fuzzyjoin}
+library(fuzzyjoin)
+colours() %>% 
+  data_frame(name=.) ->
+  r_colours
+colours %>% 
+  stringdist_left_join(r_colours)
+```
+
+We can apply cleaning functions rapidly to all data in order to clean it up before writing it out somewhere else.
+
+```{r cleantext}
+"../data/world-development-indicators/series.csv" %>% 
+  read_csv() %>% 
+  mutate_if(is.character,
+            ~str_replace_all(
+              str_trim(
+                str_to_lower(.)
+                ),
+              "[:punct:]",""))
+```
+
+## Exercise
+1. Load a CSV and use `str_trunc()` to truncate all text to 126 characters.
+
+# Data validation
+
+The closer we can get data quality checking to the data source the better! In R, we can perform quality checks as we load data and route data appropriately.
+
+Some useful R packages for data quality are:
+- `DataExplorer` to make a HTML data profile report for a dataset
+- `skimr` to get summary results of a dataset in a table
+- `assertr`, `assertive`, and `pointblank` are data quality *assertion* packages 
+
+## Data quality assertions
+
+We can add assertions as data flows in to check key columns.
+```{r assertrverify, error=TRUE}
+library(assertr)
+mydb %>% 
+  dbReadTable("Indicators") %>% 
+  verify(Value > 1)
+```
+
+These checks don't need to be fixed values, we can use information about the column in our checks.
+
+```{r assertrinsist, error=TRUE}
+library(assertr)
+mydb %>% 
+  dbReadTable("Indicators") %>% 
+  insist(within_n_sds(3), Value)
+```
+
+## Exercise
+1. Write a check that says the Sepal Length in the iris dataset must be between 4.5 and 7.5 cm
+
+# Data export
+We can export data to lots of different formats. Most commonly, we want to write to databases and flat files. 
+
+We can also write an audit trail and logs as we perform tasks in R. We should also think about ways we can make our code "restartable" should an error happen.
+
+Common R packages for exporting data:
+- `DBI` A general database interface that other DB-specific packages hook into
+- `odbc` Working with ODBC sources like SQL Server
+- `writexl` and `openxlsx` for writing to spreadsheets
+- `httr` for sending data to an API
+- `haven` for writing to formats for other stats packages
+- `readr` for writing to flat files
+- `feather` for writing data in a fast, compressed format for use between R and Python (primarily)
+- `furrr` for parallelising code
+
+## Common tasks
+
+Sometimes we have a big dataset and we need to split it out into smaller chunks, perhaps for sending to people. 
+```{r bigwrite, eval=FALSE}
+dir = "example/big-writes"
+dir.create(dir, recursive = TRUE)
+
+wdi_df = read_csv(file,
+                  progress = FALSE)
+
+
+walk(levels(wdi_df$CountryCode),
+     ~ write_csv(filter(wdi_df, CountryCode == .x), 
+                 paste0(dir, .x, ".csv"))
+     )
+```
+
+Our `map()` functions allow us to readily handle multiple inputs. This means we can use R to create text file backups for instance. Using the package `furrr` we can easily parallelise the `map` function.
+```{r bigwriter, eval=FALSE}
+library(furrr)
+plan(multicore)
+
+get_n_write<-function(x){
+  df<-dbReadTable(mydb, x)
+  write_csv(df,paste0(dir,"/", x,".csv") )
+  return(paste0("Success: ",x))
+}
+
+mydb %>% 
+  dbListTables() %>%
+  future_map_chr(get_n_write)
+  
+```
+
+## Exercise
+1. Write a table from your db to a spreadsheet using the `writexl` package.
+
+# Framework 
+Important things to think about when building ETL is your framework. 
+
+Key things to think about are:
+
+- Logging
+- Reusability
+- Secrets
+- File locations
+- Profiling performance
+- Object models
+- Testing
+
+R packages that can come in handy:
+- `here` for helping ease directory nagivation pains
+- `profvis` for profiling blocks of R code and detecting slow code
+- `R6` for building object models of how things work
+- `reticulate` for working with Python
+- `V8` for working with JavaScript
+- `testthat` for writing tests for your code
+- `tidyeval` for writing code that'll handle dynamic inputs
+- `sparklyr` for working with Spark clusters
+- `futile.logger` for building logging processes
+
+## Adding logging
+Use `futile.logger` for logging
+
+```{r Basic_R_ETL-1}
+library(futile.logger)
+flog.info("Hello, %s", "world")
+
+# Put pid in logging in multi-processing
+flog.info('%d message', Sys.getpid()) 
+
+# This won't print by default
+flog.debug("Goodbye, %s", "world")
+
+# Change the log level to debug and try again
+flog.threshold(DEBUG)
+flog.debug("Goodbye, %s", "world")
+
+# Keep an alternate logger at WARN
+flog.threshold(WARN, name='quiet')
+
+# This won't print since it's using the logger named 'quiet'!
+flog.debug("Goodbye, %s", "world", name='quiet')
+```
+
+## Testing code
+One of the biggest advantages about R is that we can easily generate unit tests that help us verify our code is correct.
+
+```{r testthatfn}
+library(testthat)
+general_clean<-function(df){
+  df %>% 
+    mutate_if(is.character, str_to_lower)
+}
+```
+
+Tests are *assertions* about what we expect to occur. Anything that doesn't meet our expectation is a failed test.
+```{r testthat}
+test_that("clean lowercases",{
+  mydf<-data_frame(a=LETTERS[5])
+  expect_equal(general_clean(mydf),
+               data_frame(a=letters[5]))
+})
+```
+
+
+## Exercise
+1. Write a function that scales numeric columns in a table using the `scale()` function
+2. Test the function works as expected
+
+# Infrastructure
+You've got to host your R ETL somewhere. You can encapsulate your processes in Docker containers, run it from SQL Server (using Microsoft's ML Server), or have it working on a standalone machine.
+
+When you're hosting it you might need to think about datasets that don't fit in memory, how you manage configuration like SMTP, and how you manage change.
+
+Useful packages for this sort of thing:
+- Microsoft ML packages like `RevoScaleR` for working with datasets that won't fit in memory
+- `mailR` for sending emails
+- `checkpoint` for specifying an agreed package snapshot date
+- `miniCRAN` for creating your own approved package download space
+- `git2r` for working with git
+- `openssl` for SSL tasks
+
+## Building your own repository
+```{r minicran, eval=FALSE}
+library(miniCRAN)
+makeRepo("../datasauRus")
+```

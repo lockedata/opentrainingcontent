@@ -1,0 +1,142 @@
+```{r Basic_Python_Optimisation-1, include=FALSE}
+options(prompt = '>>> ')
+options(continue = '>>> ')
+
+library(reticulate)
+use_python("//anaconda/bin/python")
+use_condaenv("py36")
+
+```
+# Optimisation
+
+Optimisation is defined as the selection of the best alternative among a number of possible options. An optimisation problem consist to maximize or minimize a real function that do not violate constrains. One of the simplest way to perform optimisation is using linear programming (LP).
+
+## Linear Programming 
+
+Linear programming, also called linear optimisation, is a method to achieve the best solution from a problem with given constraints. The problem can be expressed in the standard form:
+
+minimize $f(x) = c^Tx$
+
+subject to $Ax \leq b$
+
+and $x \geq 0$
+
+where x is the vector of the decision variables to be determined, c and b are vectors of known variables and A is the known matrix. The expression to be minimised is called objective function. The inequality is the constraint over which the objective function is to be optimized. To maximize $f(x)$ is needed to minimize $-f(x)$, so that $max(f(x)) = -min(-f(x))$.
+
+## Example 
+
+A company produces two different types of chocolate A and B, A is prepared with 2 units of milch and 5 units of cocoa butter and B is prepared with 1 unit of milch and 7 units of cocoa butter. The company want to maximise the profit for these products and on each sale the company makes the profit of \$600 for A and \$500 for B. In the stock there are only 6 units of milch and 20 units of cocoa butter. 
+
+Decision variables:               $A = x_1$ and $B = x_2$
+
+Objective function (the profit):  $f(x) = 600*x_1+500*x_2$
+
+Constraint for the milch:          $2*x_1+1*x_2 \leq 6$
+
+Constraint for the cocoa butter:   $5*x_1+ 7*x_2 \leq 20$
+
+Non-negativity restriction:       $x_1, x_2 \ge 0$
+
+## Simplex Method
+
+This is an iterative method to solve linear programming. The method introduce a new variable called "slack variables", which transform the constraint from inequality to  equality constraint. For example, the inequality
+
+$2*x_1+1*x_2 \leq 6$
+
+$5*x_1+ 7*x_2 \leq 20$
+
+are replaced with
+
+$2*x_1+1*x_2 + s_1 = 6$
+
+$5*x_1+ 7*x_2 + s_2 = 20$
+
+with $s_1, s_2 \ge 0$ slack variables.
+
+In this case is much more easy to perform manipulation.
+
+## Linear programming with Python
+
+There are several library that can be used with Python to solve linear programming, here we will explore only CVXOPT, PuLP and scipy. In this introduction I will present some examples with these three Python libraries. 
+
+## Python LP using scipy
+
+We will solve the previous example with scipy library, which provide the function for linear programming optimize.linprog. This function minimize a linear objective function f(x) subject to constraint $Ax \leq b$.
+In this example we need to maximize f(x) so to be able to use optimize.linprog that is defined for minimization, we have to work around this mismatch. To do this we can multiply the objective function by -1. Finding the maximum of a g(x) function is equivalent to finding the minimum of f(x)=-g(x). This is the reason why the c coefficients are multiplied by -1.
+
+
+```{python Basic_Python_Optimisation-2, comment=NA, results = 'hold'}
+import numpy as np
+from scipy.optimize import linprog
+
+A = np.matrix([               # coefficients of the constraints
+[2, 5],
+[1, 7]
+]).T
+
+b = np.array([6, 20])         # constraint constants
+c = np.array([-600, -500])    # coefficient of f(x)
+
+
+# Find the minimun of f(x)
+res = linprog(c, A_ub = A, b_ub = b, bounds=(0, None))
+print(res)
+```
+
+
+We observe that the results is negative -2022, multiplying this for -1 we obtain the maximum of the function. The maximum profit that the company can realize with the stock of milch and cocoa butter is $2022.
+In this example we see that the company should use 2.4 units of milch and 1.1 units of cocoa butter to maximize the profit. This function give as output also the values of the slack variables.
+
+## Python LP using CVXOPT
+
+The same problem can be solved using cvxopt library, which is a packages for convex optimisation. This library use dense matrix that are created with the function "matrix" of cvxopt. The numerical values in the matrix array must be in double format.
+
+```{python Basic_Python_Optimisation-3, comment=NA, results = 'hold'}
+from cvxopt import matrix, solvers
+
+A_c = matrix([[2.0,5.0], [1.0,7.0]])
+b_c = matrix([6.0,20.0])
+c_c = matrix([-600.0, -500.0])
+sol_c = solvers.lp(c_c, A_c, b_c)
+print(sol_c['x'])
+```
+
+As we did for the function linprog, we multiplied $c*(-1)$ to maximize the profit.
+In this case we obtain the same x decision variables.
+
+## Python LP with PulP
+
+PuLP is another library for linear programming. We will explore how to solve a LP problem using it.
+
+```{python Basic_Python_Optimisation-4, comment=NA, results = 'hold'}
+
+import pulp
+choco = pulp.LpProblem("Maximization problem", pulp.LpMaximize)
+x = pulp.LpVariable('x', lowBound=0, cat='Continuous')
+y = pulp.LpVariable('y', lowBound=0, cat='Continuous')
+# Objective function
+choco += 600 * x + 500 * y, "Z"
+# The contraints are added using the operator +=
+choco += 2 * x + y <= 6
+choco += 5 * x + 7 * y <= 20
+choco
+choco.solve()
+pulp.LpStatus[choco.status]
+
+for variable in choco.variables():
+    print("{} = {}".format(variable.name, variable.varValue))
+    
+print(pulp.value(choco.objective))
+```
+
+From the code above we can observe that we do not multiply any coefficients for -1. This is why PuLP has is own function for the maximisation and minimisation problems.
+We obtained the same results as the other methods.
+
+
+## References
+
+scipy.optimize.linprog: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.linprog.html
+
+CVXOPT: http://cvxopt.org/index.html
+
+PuLP: https://pythonhosted.org/PuLP/

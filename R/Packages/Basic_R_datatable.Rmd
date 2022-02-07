@@ -1,0 +1,319 @@
+# data.table
+```{r Basic_R_datatable-1, include=FALSE}
+library(data.table)
+irisDT<-setDT(copy(iris))
+```
+
+## Purpose
+`data.table` is a fast and succinct data manipulation package.
+
+## Requirements
+- `data.table` required
+
+## Basics
+![](https://github.com/stephlocke/lazyCDN/raw/master/datatable.png)
+
+### SELECT
+`data.table` uses non-standard evaluation to save you having to put speechmarks around column names.
+
+```{r Basic_R_datatable-2, eval=TRUE, results='hide'}
+## Base R
+iris[1,"Species"]
+
+## data.table R
+irisDT[1, Species]
+```
+
+To select multiple columns use `.()`, a short hand for `list()`.
+
+```{r Basic_R_datatable-3, eval=TRUE, results='hide'}
+## Base R
+iris[ ,c("Species","Sepal.Width")]
+
+## data.table R
+irisDT[ , .(Species, Sepal.Width)]
+```
+
+You can use the `.SDCols` argument to provide lists of columns to include or exclude.
+
+```{r Basic_R_datatable-4, eval=TRUE, results='hide'}
+## Base R
+iris[ ,setdiff(colnames(iris),c("Species"))]
+
+## data.table R
+irisDT[ , .SDcols=-Species]
+```
+
+You can alter names as you output data.
+```{r Basic_R_datatable-5, eval=TRUE, results='hide'}
+## Base R
+irisTMP <- iris[,c("Species","Sepal.Width")]
+names(irisTMP) <- c("Species","SepalW")
+irisTMP
+
+## data.table R
+irisDT[, .(Species, SepalW = Sepal.Width)]
+```
+
+### WHERE
+You can add conditions without needing to reference the table multiple times.
+```{r Basic_R_datatable-6, eval=TRUE, results='hide'}
+## Base R
+iris[iris$Sepal.Length > 5, ]
+
+## data.table R
+irisDT[Sepal.Length > 5, ]
+```
+
+### ORDER BY
+ORDER BY uses the same position as WHERE since and ORDER in R just specifiying the row numebrs to return instead of using a boolean.
+
+```{r Basic_R_datatable-7, eval=TRUE, results='hide'}
+## Base R
+iris[order(iris$Sepal.Length),]
+
+## data.table R
+irisDT[order(Sepal.Length),]
+```
+
+
+### Aggregations
+You can get a count of rows using the shortcut `.N`.
+
+```{r Basic_R_datatable-8, eval=TRUE, results='hide'}
+## Base R
+sum(iris$Sepal.Width > 5)
+
+## data.table R
+irisDT[Sepal.Width > 5, .N]
+```
+
+You can perform a COUNT DISTINCT using the function `uniqueN()`.
+```{r Basic_R_datatable-9, eval=TRUE, results='hide'}
+## Base R
+length(unique(iris$Sepal.Width))
+
+## data.table R
+irisDT[, uniqueN(Sepal.Width)]
+```
+
+Perform multiple aggregations inside a `.()` and use the aliasing facility to give new names to columns.
+```{r Basic_R_datatable-10, eval=TRUE, results='hide'}
+## Base R
+data.frame(Count=nrow(iris), SumSepal= sum(iris$Sepal.Width))
+
+## data.table R
+irisDT[, .(Count=.N, SumSepal=sum(Sepal.Width))]
+```
+
+### GROUP BY
+`data.table` take a third position argument -- a GROUP BY.
+
+```{r Basic_R_datatable-11, eval=TRUE, results='hide'}
+## Base R
+data.frame(table(iris$Species))
+
+## data.table R
+irisDT[, .N, Species]
+```
+
+Use the `.()` syntax to add multiple columns to the GROUP BY. You can also group on expressions.
+
+```{r Basic_R_datatable-12, eval=TRUE, results='hide'}
+## Base R
+data.frame(table(iris$Species,iris$Sepal.Length>5))
+
+## data.table R
+irisDT[, .N, .(Species, Gt5=Sepal.Length>5)]
+```
+
+### Exercise
+For flowers with sepals wider than 1, group by species and if their sepals are less than or greater than 5,  return the average sepal width and count in each group.
+
+```{r Basic_R_datatable-13, eval=TRUE, results='hide', echo=FALSE}
+irisDT[  Sepal.Width > 1
+       , .(Count= .N, meanPetal=mean(Petal.Length))
+       , .(Species, Gt5=Sepal.Length>5)]
+```
+
+## IO
+
+The `fread()` function allows us to do fast reads of CSV type files. It's very fast and allows for relatively complicated imports.
+```{r Basic_R_datatable-14, warning=FALSE, message=FALSE}
+file<-"../data/Food_Inspections1.csv"
+system.time(
+fi1<-fread(file)
+)
+file.size(file)/1024^2
+nrow(fi1)
+```
+
+We can also use data.table for fast writes. This parallelises the write for performance.
+
+```{r Basic_R_datatable-15}
+system.time(
+fwrite(fi1, file, verbose = FALSE)
+)
+
+file.size(file)/1024^2
+```
+
+## Joins
+
+### Indexes
+We can "index" columns for performance of queries. You can set multiple indexes.
+
+```{r Basic_R_datatable-16}
+setindex(irisDT, Species, Sepal.Width)
+setindex(irisDT, Sepal.Length)
+indices(irisDT)
+```
+
+### Keys
+We can do a "primary key" in `data.table` - unlike a typical PK it doesn't have a uniqueness constraint and allows missings. It performs a sort, when it sets a key.
+
+```{r Basic_R_datatable-17}
+setkey(irisDT, Species)
+key(irisDT)
+```
+
+However, we don't often need to do this these days!
+
+### Implicit joins
+If there are keys set on two tables then we can do an implicit join.
+
+- Can join on multiple columns 
+- Works on position
+- Will join on columns to the shortest key length
+
+```{r Basic_R_datatable-18}
+irisLK<-data.table(a="setosa",b=12, key = "a")
+irisDT[irisLK,][1:5,]
+```
+
+### Explicit joins
+data.table also has an `ON` command to enable us to specify join criteria at join time.
+
+```{r Basic_R_datatable-19, eval=FALSE}
+irisDT[irisLK, on=.(Species=a)]
+```
+
+```{r Basic_R_datatable-20, echo=FALSE}
+irisDT[irisLK, on=.(Species=a)][1:10,]
+```
+
+### Comparison joins
+We can add range-based joins too
+```{r Basic_R_datatable-21, eval=FALSE}
+irisDT[irisLK, on=.(Species=a,Sepal.Length<=b)]
+```
+
+```{r Basic_R_datatable-22, echo=FALSE}
+irisDT[irisLK, on=.(Species=a,Sepal.Length<=b)][1:10,]
+```
+
+### Join types
+```{r Basic_R_datatable-23, results='hide'}
+## Inner join
+irisDT[irisLK,]
+
+## Left join
+irisLK[irisDT,]
+
+## Full outer
+merge(irisDT, irisLK, by.x="Species", by.y="a", all=TRUE)
+```
+
+### Union
+UNION ALL multiple tables at once with `rbindlist()`. 
+
+ Perform a UNION by wrapping the `rbindlist()` in  `unique()`.
+```{r Basic_R_datatable-24}
+rbindlist(list(irisDT, irisDT[1:50]))
+unique(rbindlist(list(irisDT, irisDT[1:50])))
+```
+
+## Grouping
+### .SD
+`data.table` has a concept of a subset of a `data.table` with the short hand `.SD` to represent them.
+
+- A table is a subset of itself
+- When you group, each group is a subset
+- Each subset is a data.table
+
+You can write queries to apply on the `.SD`.
+```{r Basic_R_datatable-25}
+irisDT[
+  , .SD[which.min(Sepal.Width), ]
+  , Species]
+```
+
+You can use this to apply actions to every column.
+```{r Basic_R_datatable-26}
+irisDT[ 
+  , lapply(.SD, mean)
+  , Species]
+```
+
+## UPDATEs/INSERTs
+
+The `:=` operator is used to update or insert.
+```{r Basic_R_datatable-27}
+irisDT[, Sepal.Area:= Sepal.Width*Sepal.Length]
+```
+
+```{r Basic_R_datatable-28, echo=FALSE}
+head(irisDT)
+```
+
+Use the `:=` operator as a function to perform updates on multiple columns at once.
+
+```{r Basic_R_datatable-29}
+irisDT[, `:=`(Sepal.Area= Sepal.Width*Sepal.Length,
+              Petal.Area= Petal.Width*Petal.Length)]
+```
+
+
+```{r Basic_R_datatable-30, echo=FALSE}
+head(irisDT)
+```
+
+Alternatively, put a vector of names on the LHS of the operator and pass a list to the RHS.
+
+```{r Basic_R_datatable-31}
+irisDT[ ,c("Mean","Median"):=.(mean(Sepal.Width),median(Sepal.Width))
+        , Species]
+```
+
+
+```{r Basic_R_datatable-32, echo=FALSE}
+head(irisDT)
+```
+
+## Reshaping data
+Unpivot with `melt()` and provide it with columns you don't want to be unpivoted.
+
+```{r Basic_R_datatable-33}
+irisM<-melt(irisDT,id.vars = "Species")
+```
+
+
+```{r Basic_R_datatable-34, echo=FALSE}
+head(irisM)
+```
+
+Use `dcast()` to pivot data, specifying in a formula the columns to stay on the rows and the column to make into column headers. Specify a function to handle how values should be aggregated.
+
+```{r Basic_R_datatable-35}
+dcast(irisM, Species ~ variable, mean)
+```
+
+
+## Exercise
+1. Use `asDT()` to convert the `nyc13flights::flights` data to a data.table
+2. Add the count of flights for the carrier as a column to the data
+3. Create a summary table showing the number of flights per carrier by month (pivot the data)
+
+## Next steps
+- [data camp course](https://www.datacamp.com/courses/data-table-data-manipulation-r-tutorial)
+- [data.table cookbook](https://github.com/stephlocke/Rtraining/blob/master/inst/handouts/fundamentals/tablewrangling.Rmd)

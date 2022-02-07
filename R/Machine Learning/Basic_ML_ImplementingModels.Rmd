@@ -1,0 +1,49 @@
+
+# Implementing models
+We need to get our models into production. Different models will have different requirements but typically we need to be able to:
+
+1. Access the data sources that are needed to gather all the components for a model e.g. external data
+2. Derive the relevant features for our model
+3. Make predictions
+4. (optionally) Re-train our model on a regular basis
+
+These are a number of options for architecting solutions to meet these requirements and it can depend on the requirements for things like batch or real-time predictions, the location(s) of the data, what architecture the capability has to sit in, and who will have responsibility for getting data into the right shape for sending to the prediction capability.
+
+## Docker
+Docker containers are like light virtual machines, and you can specify files and routines to include in them. This means you can encapsulatate a process whether it's a batch process with an output or an online API for real-time predictions. These can also scale really effectively and be republished easily when there's changes.
+
+A great place to start with R in Docker are the [rocker containers](https://hub.docker.com/u/rocker/). These contain different base containers that you can to get your code working in Docker quickly.
+
+There are various R packages which can help with Dockerising workloads:
+
+- [harbor](https://github.com/wch/harbor), [docker](https://github.com/bhaskarvk/docker), and [stevedore](https://github.com/richfitz/stevedore
+) are different container management packages, none of which is a clear "standard" yet 
+- [containerit](https://github.com/o2r-project/containerit) will help you put any R code into a container
+- [liftr](https://github.com/road2stat/liftr) helps you encapsulate rmarkdown processes into containers
+- [rize](https://github.com/cole-Brokamp/rize) helps you make a shiny dashboard into a container
+
+## APIs
+A great way to surface models is through APIs. An API will give someone a URL they can send data to in order to get a prediction. Inside the API you can do anything you need to do like get extra data, write to a database, and make predictions without the person making the API request needing to know about anything that happens.
+
+Two key packages for making APIs are [opencpu](https://www.opencpu.org) and [plumber](https://www.rplumber.io/).
+
+Either of these can be used to turn an R function into a URL, and can be hosted in Docker containers for deployment and scaling purposes.
+
+The key things to remember when using these API packages is to ensure you know what people *must* send to you and what you'll retrieve and process inside your function.
+
+## Making predictions in database
+
+APIs and Docker containers might be a bit new or too much change for an organisation and they'll want to put things in databases instead.
+
+One solution is Microsoft SQL Server which can include an R service. With this you can wrap any R code into a stored procedure that can be used to make predictions. There's also options for producing models that can be used in general SQL statements using the `PREDICT` keyword.
+
+Another option is converting a model into a native SQL statement. The `tidypredict` package gives us some handy helper functions to do this. It doesn't support all types of models but does support most common ones.
+
+```{r Basic_ML_ImplementingModels-1}
+library(tidypredict)
+library(nycflights13)
+library(DBI)
+con <- dbConnect(RSQLite::SQLite(), path = ":memory:")
+model <- lm(dep_delay ~ hour + distance, data = flights)
+tidypredict_sql(model, con = con)
+```

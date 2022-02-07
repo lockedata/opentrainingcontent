@@ -1,0 +1,486 @@
+```{r Basic_R_DataViz-1, include=FALSE}
+library(dplyr)
+library(RColorBrewer)
+library(ggplot2)
+library(plotly)
+library(cowplot)
+
+theme_set(theme_grey())
+```
+
+# (PART) Visualising data {-} 
+
+# Data visualisation
+There are hundreds of specific or supplementary R packages for data visualisation. This introductory module focuses on `ggplot2` as it provides a coherent set of vocabulary we can use to discuss and develop charts. Once comfortable with `ggplo2` there are packages for network diagrams, time series, and more that use the `ggplot2` syntax.
+
+`ggplot2` and indeed any code that can be used to generate graphics has the benefit of being reproducible and reusable. In `ggplot2`s case, graphs will be the same if you provide the same data to your code, or you can get an updated version if you provide it with new code. You can also make variants quickly, just with another line of code.
+
+For instance, to make a scatter plot I would write the following:
+
+```{r Basic_R_DataViz-2}
+library(ggplot2)
+library(datasauRus)
+
+ggplot(datasaurus_dozen, aes(x=x, y=y))+
+  geom_point()
+```
+
+As it's a mess of data I can add just an extra line of code to split the chart into multiple charts based on a category to see lots of slices of the data. I can even store the chart for later so I can use it in multiple locations.
+
+```{r Basic_R_DataViz-3}
+datasaurus_dozen %>% 
+  ggplot()+
+  aes(x=x, y=y) +
+  geom_point() +
+  facet_wrap(~dataset) ->
+    p
+p
+```
+
+Having the chart as an object stored in memory, I can now use it as a template for new datasets with the similar structure. Nifty!
+```{r Basic_R_DataViz-4}
+p %+% datasauRus::simpsons_paradox
+```
+
+## ggplot2 fundamentals
+`ggplot2` has a number of standard terms that result in functions. Before we dive into the code, here are the concepts.
+
+Term | Explanation | Example(s)
+------------- | ------------- | -------------
+**plot** | A plot using the grammar of graphics | `ggplot()`
+**aes**thetics | attributes of the chart | colour, x, y
+mapping | relating a column in your data to an aesthetic 
+**stat**istical transformation | a translation of the raw data into a refined summary | `stat_density()`
+**geom**etry | the display of aesthetics | `geom_line()`, `geom_bar()`
+**scale** | the range of values | axes, legends
+**coord**inate system|  how geometries get laid out | `coord_flip()`
+**facet** | a means of subsetting the chart | `facet_grid()`
+**theme** | display properties | `theme_minimal()`
+
+## Common aesthetics
+
+When we build a chart, we need to map some of our data to aesthetics. Common aethetics are:
+- **x** the x-axis
+- **y** the y-axis
+- **group** split out values by this column
+- **colour** change line colours by this column
+- **size** the size of the object
+- **fill** the internal colour of things like bars
+
+```{block Basic_R_DataViz-5, type="protip"}
+You can use American spellings if you want.
+```
+
+## Minimum requirements
+The simplest plot requires:
+
+- the `ggplot()` function to make a plot
+- some data passed to the `data` argument
+- one or more parts of your data to be mapped to aesthetics in the `aes()` function
+- a geometry to represent your data
+
+```{r Basic_R_DataViz-6}
+datasaurus_dozen %>% 
+  ggplot()+
+  aes(x=x, y=y)
+  geom_point() 
+```
+
+We can add extra features in the `aes()` and add fixed values within the geom functions.
+```{r Basic_R_DataViz-7}
+datasaurus_dozen %>% 
+  ggplot()+
+  aes(x=x,y=y,colour=dataset, size=x) +
+  geom_point(alpha=.5) 
+```
+
+# Common charts
+Scatter plots are built with `geom_point()`.
+
+```{r Basic_R_DataViz-8}
+simpsons_paradox %>% 
+  ggplot()+
+  aes(x=x,y=y) + 
+  geom_point()
+```
+
+You can show frequency values using the `geom_bar()` function.
+```{r Basic_R_DataViz-9}
+#compact version of ggplots
+ggplot(data=mtcars, aes(x=am))+
+  geom_bar()
+```
+
+You can represent values as columns using `geom_cols()`
+```{r Basic_R_DataViz-10}
+ggplot(data=mtcars, aes(x=rownames(mtcars),y=mpg)) +
+  geom_col()
+```
+
+You can draw line charts via `geom_line()`.
+```{r Basic_R_DataViz-11}
+datasaurus_dozen %>% 
+  ggplot()+
+  aes(x=x,y=y, group=dataset, colour= dataset)+
+  geom_line()
+```
+
+## Customising scatter plots
+
+There are a number of attributes you can modify in a scatter plot, as well as location (`x`,`y`).
+
+```{r Basic_R_DataViz-12}
+simpsons_paradox %>% 
+  ggplot()+
+  aes(x=x,y=y,
+     size=dataset, colour=dataset, 
+     shape=dataset, alpha=dataset) + 
+  geom_point()
+```
+
+If you want to avoid overplotting, where one point hides another, you can use `alpha` to lower the opacity of points so overlapping points appear darker.
+
+```{r Basic_R_DataViz-13}
+simpsons_paradox %>% 
+  ggplot()+
+  aes(x=x,y=y,colour=dataset) + 
+  geom_point(alpha=.5)
+```
+
+Or, if the precise values aren't too important, you can use `geom_jitter()` which will apply a small random number to values so they are more spread out.
+
+```{r Basic_R_DataViz-14}
+simpsons_paradox %>% 
+  ggplot()+
+  aes(x=x,y=y, colour=dataset) + 
+  geom_jitter(width=5)
+```
+
+### Exercise
+1. Plot the iris dataset with `Sepal.Width` and `Sepal.Length` as the axes;
+2. Try out some of the aesthetics used to see if there's any clusters in the data;
+3. Try out some of the aesthetics used to see if there's any overplotting issues.
+
+## Customising bar charts
+
+To produce frequency charts, we can use `geom_bar()`. To produce value charts, we use `geom_col()`. Bar charts take many of the same arguments as our scatter plots.
+
+- **colour** impacts the outline of bars, not the overall colour (I generally don't utilise this as a consequence)
+- **fill** impacts the bar colour when using `geom_col()`
+- **alpha** and **group** work just like they do for points
+- **shape** does not make sense for bars
+- **width** can be specified for bars
+
+```{r Basic_R_DataViz-15}
+ggplot(data=mtcars, 
+       aes(x=rownames(mtcars), y=mpg,
+           colour=as.factor(am)))+
+  geom_col()
+```
+
+```{r Basic_R_DataViz-16}
+ggplot(data=mtcars, aes(x=rownames(mtcars), y=mpg,
+                        fill=as.factor(am)))+
+  geom_col(alpha=0.5)
+```
+
+```{r Basic_R_DataViz-17}
+ggplot(data=mtcars, aes(x=rownames(mtcars), y=mpg,
+                        colour=as.factor(am)))+
+  geom_col(width=1)
+```
+
+When we want to do stacked bar charts we can add the `group` and `fill` options.
+```{r Basic_R_DataViz-18}
+ggplot(data=mtcars, aes(x=cyl, y=wt, 
+                        group=am, fill=am))+
+  geom_col()
+```
+
+To make these 100% fill charts, we can specify `position="fill"`.
+```{r Basic_R_DataViz-19}
+ggplot(data=mtcars, aes(x=cyl, y=wt, 
+                        group=am, fill=am))+
+  geom_col(position = "fill")
+```
+
+To make prevent stacking with multiple groups, we can specify `position="dodge"`.
+```{r Basic_R_DataViz-20}
+ggplot(data=mtcars, aes(x=cyl, y=wt, 
+                        group=am, fill=am))+
+  geom_col(position = "dodge")
+```
+
+
+### Exercises
+1. Produce a bar chart showing the max `y` value for each dataset in the `datasaurus_dozen`.
+
+## Customising line charts 
+Line charts work similarly to scatter charts with some variations in aesthetics
+
+- **shape** does not make sense for lines
+- **size** impacts line thickness
+- **lineend** and **linetype** impact the appearance of the line
+
+
+```{r Basic_R_DataViz-21}
+simpsons_paradox %>% 
+  ggplot()+
+  aes(x=x,y=y, 
+  group=dataset, colour= dataset)+
+  geom_line(size=2, lineend = "round", linetype = 2)
+```
+
+# Density charts
+Density charts express the distribution of data in one or more columns. The simplest type of density chart is a histogram.
+
+```{r Basic_R_DataViz-22}
+ggplot(data=mtcars, aes(x=wt))+
+  geom_histogram()
+```
+
+Alternatively, we can get a smoothed version the distribution.
+```{r Basic_R_DataViz-23}
+ggplot(data=mtcars, aes(x=wt))+
+  geom_density()
+```
+
+A similar representation but per category is the violin plot.
+```{r Basic_R_DataViz-24}
+ggplot(data=mtcars, aes(x=as.factor(am),y=wt))+
+  geom_violin()
+```
+
+To look at a heatmap of value distribution between two columns we can produce a binned, 2D representation.
+```{r Basic_R_DataViz-25}
+ggplot(data=mtcars, aes(x=wt, mpg))+
+  geom_bin2d()
+```
+
+### Exercises
+1. Build a density chart of your dd_sample using `geom_density()`, use the sorts of aesthetics values we've already used to make this a density by dataset.
+
+## Other chart types
+There are other geoms and you can add multiple geoms to a chart. This module is necessarily brief but the [ggplot2 book](http://geni.us/ggplot) is amazing.
+
+# Facetting data
+One big chart can be hard to read. Splitting a cart into smaller charts for different slices of data can make it much easier to analyse. These "small multiple" charts are called facets in ggplot2.
+
+## Facetting on a single column
+If we want to split out by a single column / group in our data, we use `facet_wrap()` which we can provide with specifications as to how many charts should be on a row or column. Inside the function, ggplot2 makes use of the formula syntax to be able to provide values to the row or column specifications.
+
+```{r Basic_R_DataViz-26 }
+ggplot(data=datasaurus_dozen, aes(x=x,y=y))+
+  geom_point()+
+  facet_wrap(~dataset)
+```
+
+Customise the wrapping with `nrow` or `ncol`.
+```{r Basic_R_DataViz-27}
+ggplot(data=datasaurus_dozen, aes(x=x,y=y))+
+  geom_point()+
+  facet_wrap(~dataset, nrow = 3)
+```
+
+## Faceting on multiple columns
+Use `facet_grid()` to produce a small multiple for two or more variables. Variables for the row go on the LHS of the tilde and the variables for the column go on the right.
+```{r Basic_R_DataViz-28}
+datasaurus_dozen %>% 
+  mutate(early=dataset<"n") %>% 
+  ggplot(aes(x,y))+
+  geom_point()+
+  facet_grid(early~dataset)
+```
+
+## Exercises
+1. Produce a facetted scatter plot for `simpsons_paradox` split by dataset.
+
+# Adjusting appearance
+
+## Themes
+The appearance of a ggplot can be altered rapidly by the application of a theme. There are many `theme_*` functions available in ggplot2 but you can also get ggthemes or create your own.
+
+```{r Basic_R_DataViz-29, echo=FALSE}
+library(cowplot)
+datasaurus_dozen %>% 
+  filter(dataset=="dino") ->
+  dino
+
+theme_set(theme_grey())
+p<-ggplot(dino,aes(x,y))+geom_point()
+p_min<-p+theme_minimal()
+p_void<-p+theme_void()
+p_bw<-p+theme_bw()
+plot_grid(p, p_min, p_void, p_bw)
+```
+
+Use a theme function to change themes.
+```{r Basic_R_DataViz-30}
+ggplot(data=mtcars, aes(x=cyl, y=wt, 
+                        group=am, fill=am))+
+  geom_col() +
+  theme_dark()
+```
+
+## Series colours
+You can change the colour scales used to by your ggplot. A great way to amend the colours is to use the RColorBrewer package. Based off research into cartography, the [color Brewer](http://colorbrewer2.org/) website provides fantastic colour pallettes for chart readability. It also allows you to select pallettes based on being colour-blind and printer friendly, which are immportant things to think about when producing charts for consumption by others.^[One in ten men are are colour blind, and so many people still insist on printing stuff that you should think about these things.] There are other colour packages out there e.g. viridis and wesanderson and you can build your own.
+
+The naming convention for different pallettes is `scale_[aesthetic]_[type]()`.
+
+```{r Basic_R_DataViz-31}
+library(RColorBrewer)
+ggplot(datasaurus_dozen[1:852,],aes(x,y, colour=dataset))+ geom_point()+
+  facet_wrap(~dataset)+
+  scale_colour_brewer(type="qual", palette = "Dark2")
+```
+
+## Titles and labels
+An important thing to for your charts is to add titles! If you just want to add a title and subtitle, you can use the `ggtitle()` function.
+
+```{r Basic_R_DataViz-32}
+ggplot(datasaurus_dozen,aes(x,y, colour=dataset))+ 
+  geom_point()+
+  facet_wrap(~dataset)+
+  ggtitle("Datasaurus Dozen", 
+          "Every dataset has the same summary statistics")
+```
+
+If you also want to amend the axis labels, use `labs()` instead.
+
+```{r Basic_R_DataViz-33}
+ggplot(datasaurus_dozen,aes(x,y, colour=dataset))+ 
+  geom_point()+
+  facet_wrap(~dataset)+
+  labs(title="Datasaurus Dozen", 
+       subtitle="Every dataset has the same summary statistics",
+       x= "X coord", 
+       y= "Y coord")
+```
+
+## Low level adjustments
+If you want to make adjustments to specific elements of the chart, youu can amend these inside `themes()`. There are a very large number of options you can tweak to get things just right.
+
+```{r Basic_R_DataViz-34}
+ggplot(datasaurus_dozen,aes(x,y, colour=dataset))+ 
+  geom_point()+
+  facet_wrap(~dataset)+
+  ggtitle("Datasaurus dataset") +
+  theme(legend.position="none", 
+        text = element_text(colour="red"))
+```
+
+
+## Exercises
+1. Using the knowledge acquired in this section, make one of your charts look good.
+
+# More advanced charts
+
+## ggplot2 construction
+Using the plus symbols you can continue adding things to a ggplot object.
+```{r Basic_R_DataViz-35}
+p +
+  geom_point(colour="red", size=2)+
+  facet_wrap(~dataset)+
+  geom_point(data=simpsons_paradox)
+```
+
+You can use ggplot at the end of a dplyr pipeline to keep things tidy.
+```{r Basic_R_DataViz-36}
+simpsons_paradox %>% 
+  group_by(dataset) %>% 
+  summarise_all(mean) %>% 
+  ggplot(aes(x,y))+
+  geom_point() ->
+  p
+p
+```
+
+## Supplementing plots
+As well as adding items from existing data, some geoms can either be hardcoded or will produce their own data points based off the underlying data to add information to the plot. We can use `geom_abline()` in either a hardcoded fashion or leave it to add a rough line of best bit.
+
+```{r Basic_R_DataViz-37}
+ggplot(datasaurus_dozen, aes(x,y))+
+  geom_point()+
+  facet_wrap(~dataset, scale="free") +
+  geom_abline()
+```
+
+`geom_smooth()` is another common additional geom as it produces a smoother version of your data with confidence intervals highlighted. This is great for timeseries type data.
+
+```{r Basic_R_DataViz-38}
+ggplot(datasaurus_dozen, aes(x,y))+
+  geom_point()+
+  facet_wrap(~dataset, scale="free") +
+  geom_smooth()
+```
+
+We can add labels to data points too.
+
+```{r Basic_R_DataViz-39}
+ggplot(mtcars, aes(mpg,wt, label=rownames(mtcars)))+
+  geom_point() +
+  geom_label()
+```
+
+
+Although we should use the package ggrepel to make the points visible.
+
+```{r Basic_R_DataViz-40}
+library(ggrepel)
+ggplot(mtcars, aes(mpg,wt, label=rownames(mtcars)))+
+  geom_point() +
+  geom_label_repel()
+```
+
+We can also directly plot text with `geom_text()`.
+
+```{r Basic_R_DataViz-41}
+ggplot(mtcars, aes(mpg,wt, 
+                   label=rownames(mtcars),
+                   colour=as.factor(am)))+
+  geom_text()
+```
+
+## Exercises
+1. Create a dataset from datasaurus_dozen just with dino the dinosaur;
+2. Plot dino using a scatterplot;
+3. Add a line geom.
+
+# Interactive ggplots
+There are a number of interactive charting libraries for geospatial, plots, networks, and more. Plotly is one such interactive visualisation library.
+
+```{r Basic_R_DataViz-42, message=FALSE, eval=FALSE}
+library(plotly)
+plot_ly(z = ~volcano) %>% add_surface()
+```
+
+
+## ggplotly
+`ggplotly()` is a plotly function for taking one of your existing ggplots and making it interactive.
+
+```{r Basic_R_DataViz-43, eval=FALSE}
+p<-ggplot(datasaurus_dozen,aes(x,y, colour=dataset))+ 
+  geom_point()
+ggplotly(p)
+```
+
+We can add interactive specific aesthetics when we make our ggplots without breaking the initial ggplot.
+
+```{r Basic_R_DataViz-44, eval=FALSE}
+p<-ggplot(datasaurus_dozen,
+          aes(x,y, colour=dataset, 
+              text=paste("From the dataset", toupper(dataset))))+ 
+  geom_point() +
+  facet_wrap(~dataset)+
+  theme_void()
+p
+```
+
+```{r Basic_R_DataViz-45, eval=FALSE}
+ggplotly(p, tooltip = "text")
+```
+
+## Exercises
+1. Construct a ggplot that displays the `anscombe` data and turn it into a plotly chart.
+
+

@@ -1,0 +1,280 @@
+# (PART) R building blocks {-} 
+
+# R data types
+```{block 01_datatypes-1, type="readerTODO"}
+I recommend you add a new file to your R project, save it with a file name referencing this section and try out the code.  Add your answers to the exercises and leave yourself some notes by first putting `#` sign and then typing the note after it. There's nothing like practice and taking notes for helping you retain info!
+```
+
+When we think of different bits of data, some of it might be numbers, text, dates, and more. R has it's own set of these **data types**. 
+
+Before we get into the data types, let's see how we can get R to tell us what something is. 
+
+R uses **functions** (basically, an inbuilt bit of code that you can call on to do things with, optionally passing it some data to work with) to take some inputs and get an output. The function that we can pass a value to, and get what data type it is as the output, is the `class()` function.
+
+```{r 01_datatypes-2}
+class(1)
+class(1.1)
+class("1")
+```
+
+```{block 01_datatypes-3, type='glass'}
+You can use this `class()` function if you're ever unsure what data type something is. This is great for when you're getting unexpected results!
+```
+
+## Numbers
+```{block 01_datatypes-4, type="protip"}
+I gloss over a lot of the nuance here as most people will not need it. If you want some of the nuance, read the footnotes.
+```
+
+Numbers are split into a few different types:
+
+- **integer**s are whole numbers like 1 or 42^[If you want to guarantee a number is an integer, you can suffix the value with a L e.g. `42L`. If you want to read more about this, check out the [R manual](http://cran.r-project.org/doc/manuals/R-lang.html#Constants)]
+- **numeric**s are numbers that have a decimal portion associated with them like 1.0 or 3.133^[Numerics in R are floating point numbers - this mean every decimal gets stored usually with a large amount of extra decimal places. This can lead to some unusual results when comparing two decimal values and we'll see an example later.]
+- **complex number**s are numbers that make use of the imaginary number *i* like 4i^[*i* is the square root of -1, which is an impossible number since any negative multiplied by itself would result in a positive. Descartes coined the term "imaginary" in reference to this number as it's a consistent value in formulae but doesn't exist in the real world.]
+
+### Converting to numbers
+The functions `as.numeric()` and `as.integer()` allow you to convert something stored as text into a number.
+
+These functions will give you some red text as a warning if you attempt to convert something to a number that can't be safely converted. It will still attempt to perform the conversion, but return missings (`NA`) instead of actual values.
+
+```{r 01_datatypes-5}
+as.numeric(1)
+as.numeric(1.1)
+as.numeric("1")
+as.numeric("r")
+
+as.integer(1)
+as.integer(1.1)
+as.integer("1")
+as.integer("r")
+```
+
+### Checking numbers
+You can write checks to see if something is numeric, or an integer, with `is.numeric()` or `is.integer()`.
+
+```{r 01_datatypes-6}
+is.numeric(1)
+is.numeric("1")
+
+is.integer(1)
+is.integer(1L) # There's a footnote on this
+is.integer("1")
+```
+
+
+We could also use `class()` here and inspect the result.^[You might recall that `class(1)` had the result of "`r class(1)`" - R was not by default considering 1 as an integer for the purpose of the `class()` function. This is a property of R's evaluation of values and you can force it to consider a value to be an integer by suffixing it with an L, so `class(1L)` evaluates to "`r class(1L)`".] I'm going to use it here to test the results of a conversion to show you how you can **nest** functions, which means that the inner-most function gets evaluated and the results are used by the next outer-most function, and so on.
+
+```{r 01_datatypes-7}
+class( numeric( "1" ) )
+class( integer( "1" ) )
+```
+
+### Special numbers
+As well as `i` to denote imaginary numbers, there are some additional symbols you might encounter or want to use.
+
+- `pi` = `r pi`
+- `Inf` represents positive infinity. You'll often see this if you divide a positive number by zero
+- `-Inf` represents negative infinity. You'll often see this if you divide a negative number by zero
+- `NaN` is what happens when you really screw up a calculation and do something like `0/0`. It means the result is not a number!
+
+## Text
+Text, also known as strings, is split up into two core types:
+
+- **character**s are text as we typically think of it like "red"
+- **factor**s (and the subtype **ordered factor**s) are a text type where the number of unique values is constrained e.g. the values are selected from a dropdown. Factors work by storing numbers that correspond to our values and then printing these values. This is much more space efficient when the number of unique values is low.^[In other programming languages this is often called an **enumerated string**]
+
+```{block 01_datatypes-8, type='future'}
+Factors will be covered at length in a later book. The rest of this book will work with characters.
+```
+
+In R, you can't just type some text as it will be construed as an object or function name. To **delimit** a string you can use speech marks (`"`) or apostrophes (`'`) at the beginning and end of it to show where it starts and ends. These are the **text delimiters** in R.
+
+Note you can't use the two delimiters interchangeably e.g. \"red\', but you can use them together to enable you have speech marks or apostrophes inside a string e.g. `'They said "Read this"'` or `"It's mine now"`. 
+
+If you need to have both inside a string you can **escape** the ones on the inside of a string to say they don't count as text delimiters. To escape a delimiter you can use a backslash(`\`) e.g. `"They said \"Read this\""`.
+
+```r
+'They said "Read this"'
+"It's mine now"
+"They said \"Read this\""
+```
+
+```{r 01_datatypes-9, echo=FALSE}
+'They said "Read this"'
+"It's mine now"
+"They said \"Read this\""
+```
+
+```{block 01_datatypes-10, type="glass"}
+Beware the copy & pasting (C&Ping) of code that isn't in "pre-formatted" mode. The aesthetically pleasing changing of speech marks or apostrophes at the beginning and end of some text will screw up your code. If you're getting weird errors around unexpected symbols or your console queuing up after C&Ping, replace all the speech marks and see if that fixes things. This can also happen with some types of space characters too.
+```
+
+### Converting to strings
+Converting to characters and factors is the same as working with numbers. You swap "numeric" for "character" or "factor" and you're done!
+
+You'll see a difference in how these values get displayed. Basic characters are boring - they just print out. Factors look very different. There's no speech marks and there's this Levels bit. The Levels tells you what the unique values in the lookup for this datatype are.
+
+```{r 01_datatypes-11}
+as.character(1)
+as.character("1 a")
+
+as.factor(1)
+as.factor("1 a")
+```
+
+### Checking strings
+We can check text in a similar way to checking numbers.
+```{r 01_datatypes-12}
+is.character(1)
+is.character("1")
+
+is.factor(1)
+is.factor("1")
+is.factor(as.factor("1"))
+```
+
+Additionally, the `class()` function returns the datatype.
+```{r 01_datatypes-13}
+class("1")
+class(as.factor("1"))
+```
+
+## Logical values
+Whilst we've been testing our datatypes, we've created a lot of **logical** or **boolean** values. Boolean values are `TRUE` and `FALSE`. R is case-sensitive so these have to be typed upper-case, otherwise it means something different. 
+
+```{block 01_datatypes-14, type="glass"}
+You can think of the boolean values as 1 and 0, but using these in your code can result in changing your datatype to a number. If things aren't working as expected make sure to check types as you go along.
+```
+
+### Converting to logicals
+```{r 01_datatypes-15}
+# All these return a TRUE
+TRUE
+as.logical(1)
+as.logical("TRUE")
+as.logical("true")
+
+# All these return a FALSE
+FALSE
+as.logical(0)
+as.logical("FALSE")
+as.logical("false")
+```
+
+### Checking logicals
+There is support for checking if something is of datatype logical.
+
+```{r 01_datatypes-16}
+is.logical(1)
+is.logical(TRUE)
+is.logical("TRUE")
+class(TRUE)
+```
+
+## Dates
+```{block 01_datatypes-17, type="future"}
+Dates are one of the hardest parts of programming! This is a very brief introduction to dates and they will not be covered further in this book. Expect a later book to dedicate a lot of page space to date handling.
+```
+
+
+Dates in R split into:
+
+- **date**s do not have any time component
+- **POSIX** date-times
+   + **POSIXct** is an integer based storage method
+   + **POSIXlt** is a component based storage method
+   
+You might be looking at the two POSIX times and thinking to yourself "ZOMG how am I meant to choose?". Most people use the POSIXct format^[According to my unscientific [twitter poll](http://twitter.com/SteffLocke/status/895198115594153988)], which is the default for many of R's functions.
+
+### Converting to dates
+You can convert to date-time's with `as.Date()`,`as.POSIXct()`, and `as.POSIXlt()`. Ideally, you'll provide a string with the date(time) in ISO8601 formats e.g. "YYYY-MM-DD hh:ss". If not, you'll want to read up on the date-time format [specifications](http://stat.ethz.ch/R-manual/R-devel/library/base/html/strptime.html) for R.
+
+```{r 01_datatypes-18}
+as.Date("2017-12-31")
+as.POSIXct("2017-12-31")
+as.POSIXlt("2017-12-31")
+
+as.Date("2017-12-31 23:59")
+as.POSIXct("2017-12-31 23:59")
+as.POSIXlt("2017-12-31 23:59")
+```
+
+Note that it's assuming a time zone based on my device as I've not provided a default. It's prudent to set the time zone in order to avoid the results of your code changing based on where the code is run or when^[Daylight savings time can catch you out].
+
+```{r 01_datatypes-19}
+as.POSIXct("2017-12-31 23:59", tz="UTC")
+```
+
+### Checking dates
+Unfortunately, R does not provide functions for checking whether the class of something is a date-time type without extending it's functionality. We have to use `class()` as a consequence.
+
+```{r 01_datatypes-20}
+class(as.Date("2017-12-31"))
+class(as.POSIXct("2017-12-31"))
+class(as.POSIXlt("2017-12-31"))
+```
+
+You'll see that the POSIX values not only returns the class we expected but "POSIXt" as well. POSIXt is an interchange format behind the scenes of dates in R. You don't directly use it and you can ignore it from here on in.
+
+### Getting dates and times
+R has some functions for getting current date-time values^[This is an area showing those wonderful R quirks - the `Sys.*` functions are inconsistently cased].
+
+```{r 01_datatypes-21}
+Sys.Date()
+Sys.time()
+Sys.timezone()
+```
+
+```{block 01_datatypes-22, type="protip"}
+Datetime data types in R can feel a little rudimentary or clunky. i usually use the package `lubridate` for better date handling capabilities.
+```
+
+## Missings
+Every data type has an `NA`, an identifier for a missing value. 
+
+If you use an NA in an object (more on those in a later chapter) it will take on the data type used in the object. You can, however, make NAs directly.
+
+```{r 01_datatypes-23}
+NA
+NA_integer_
+NA_character_
+```
+
+### Checking NAs
+You can check what data type an NA is, using the `class()` function.
+```{r 01_datatypes-24}
+class(NA)
+class(NA_integer_)
+class(NA_character_)
+```
+
+You can check if something is NA with the `is.na()` function.
+```{r 01_datatypes-25}
+is.na(NA)
+is.na(1)
+```
+
+## Summary
+There a few more datatypes out in the wild but numbers, strings, booleans, and dates are the core types you'll encounter. 
+
+There are normally `as.*` and `is.*` functions for converting to a datatype or checking if something is a given datatype. You can use `class()` to uncover the datatype too.
+
+Data type | Example
+------------- | -------------
+Integer | 1
+Logical | TRUE
+Numeric | 1.1
+String / character  | "Red"
+Factor (enumerated string) | "Amber" or 2 in c("Red","Amber","Green")
+Complex | i
+Date | "`r Sys.Date()`"
+
+## R Data Types Exercises
+- Convert TRUE to an integer
+- What is the datatype of the value returned by `Sys.time()`?
+- What is the datatype of the value returned by `Sys.timezone()`?
+- Make this quote into an R string
+    + "Do you think this is a game?", he said. "No, I think Jenga's a game", Archer responded.
+
+
+

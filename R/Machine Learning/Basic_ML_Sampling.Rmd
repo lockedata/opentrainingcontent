@@ -1,0 +1,80 @@
+# Sample data
+The data needs to be split into training and testing samples. **Training** gets used to build our model and **testing** is used to evaluate how good the model is.
+
+```{r Basic_ML_Sampling-1}
+library(tidyverse)
+library(AppliedPredictiveModeling)
+data(AlzheimerDisease)
+predictors %>% 
+  cbind(diagnosis) ->
+  alzheimers
+```
+
+Building models on all your data **overfits** and tends not to apply well to new data. Similarly, using all variables in your model will often result in overfitting.
+
+We can use the package `rsample` to take samples of the data.
+
+```{r Basic_ML_Sampling-2, message=FALSE, warning=FALSE}
+library(tidymodels) # specifically interested in rsample
+set.seed(77887)
+
+alzheimers %>% 
+  rsample::initial_split(prop=.7) ->
+  alz_samples
+
+alz_samples %>% 
+  training() %>% 
+  head ->
+  alz_training
+``` 
+
+A basic sampling strategy like the above makes building a model easy, however, it runs the risks that the model built over the sample won't generalise well to new data. The way people most often get around this is to take more samples and combine the models in different ways. This increases code complexity but builds more robust results.
+
+
+**k-fold Cross Validation** splits data in k chunks and is used to build `k-1` versions of a model where a different chunk of data is used for each model to test prediction quality.
+
+```{r Basic_ML_Sampling-3}
+alzheimers %>% 
+  rsample::vfold_cv() ->
+  alz_cv
+```
+
+The resulting structure is a table. We can use map and so forth to apply models and then look at the spread of resulting values. More on constructing multiple models in a section on developing models.
+
+```{r Basic_ML_Sampling-4, warning=FALSE}
+alz_cv  %>% 
+  pluck("splits") %>% 
+  map(as_data_frame) %>% 
+  map(~lm(diagnosis ~ ., data=.)) %>% 
+  map_df(broom::tidy, .id = "cv") %>% 
+  arrange(term) %>% 
+  slice(1:60) %>% 
+  ggplot() + 
+  aes(x=estimate) +
+  geom_density() +
+  facet_wrap(~term, scales = "free")
+  
+```
+
+The other common type of sampling is bootstrapping. Bootstrapping constructs multiple new samples from the dataset.
+
+```{r Basic_ML_Sampling-5}
+alzheimers %>% 
+  rsample::bootstraps() ->
+  alz_boot
+```
+
+## Exercise
+1. Create a training sample of 80% of the titanic data, using the seed 8787
+1. Create a bootstrap of 100 iterations for the titanic data, using the seed 963
+```{r Basic_ML_Sampling-6, echo=FALSE, eval=FALSE, results='hide', message=FALSE, warning=FALSE}
+set.seed(8787)
+titanic3 %>% 
+  initial_split(.8) ->
+  t_sample
+
+set.seed(963)
+titanic3 %>% 
+  bootstraps(100) ->
+  t_bootstrap
+```

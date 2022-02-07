@@ -1,0 +1,164 @@
+# Tidyeval
+
+## Purpose
+Tidyeval is the power behind the tidyverse. The tidyeval framework is primarily surfaced through the package `rlang`. The tidyeval package facilitates the making of functions, especially when working with the tidyverse.
+
+
+## Requirements
+- `rlang` required
+- `tidyverse` recommended
+
+```{r Basic_R_tidyeval-1}
+library(rlang)
+```
+
+## Basics
+`rlang` can handle the following:
+
+- Stronger typed objects
+- Extra object metadata
+- Extra object assertions
+- New function creation
+- Non-standard evaluation
+- Non-standed execution
+- Managing environments
+- Improved call stack and messaging
+
+We will cover the fundamentals of everything bar environments and call stacks.
+
+### Objects
+
+We have new functions for making vectors of a specified data-type.
+
+```{r Basic_R_tidyeval-2}
+lgl(TRUE, 1)
+int(TRUE, 1)
+dbl(TRUE, 1, 1.1)
+chr("a", "b")
+```
+
+Along with new functions for testing datatypes.
+```{r Basic_R_tidyeval-3}
+is_integer(lgl(TRUE, 1))
+is_logical(int(TRUE, 1))
+is_character(dbl(TRUE, 1, 1.1))
+is_double(chr("a", "b"))
+```
+
+We can also perform easier metadata changes.
+```{r Basic_R_tidyeval-4}
+pi
+pi %>% set_names("pi")
+```
+
+```{r Basic_R_tidyeval-5}
+pi %>% set_attrs(cake=FALSE, names="pi")
+```
+
+There are also functions for simplifying list objects in various ways.
+```{r Basic_R_tidyeval-6}
+my_list<-list(letters[1:5],LETTERS[1:3],
+              list(letters[10:15],
+                   LETTERS[8:10]))
+my_list
+```
+
+Remove a level
+```{r Basic_R_tidyeval-7}
+flatten(my_list)
+```
+
+Remove all levels
+```{r Basic_R_tidyeval-8}
+squash(my_list)
+```
+
+Specify type to get consolidation of vectors
+
+```{r Basic_R_tidyeval-9}
+rlang::flatten_chr(my_list)
+```
+
+
+#### Exercise
+1. Create a new `letters` vector that is a character vector.
+2. Add attributes saying which alphabet it is and how many letters are in it
+
+### Functions
+
+Build and assign a function to an environment with `new_function`.
+```{r Basic_R_tidyeval-10}
+calc<-new_function(list(a=1,b=2), quote(a*b))
+calc()
+calc(2,3)
+```
+
+Alternatively, convert *lambda functions* to full functions using `as_function`.
+
+These lambda functions start with a tilde (`~`) and contain a calculation with up to 2 input arguments. Use `.` for just one input argument and `.x` and `.y` for two input arguments.
+
+```{r Basic_R_tidyeval-11}
+calc2<-as_function(~.x*.y)
+calc2(2,3)
+```
+
+#### Exercise
+1. Create a function that calculates the area of a circle givene a radius. Use the default value for pi, unless someone wants to provide a more precise version.
+2. Create a function that converts from fahrenheit to celcius.
+
+### Quasiquotation
+- `quo` quote something
+- `enquo` quote something or an expression
+- `expr` quote something provided to a function argument
+- `quo_name` get the name of something
+- `!!` unquoute and evaluate  operator
+- `!!!` unquote, combine, and evaluate operator
+
+Use `quo` to make something context aware and `!!` to evaluate a context aware value.
+
+```{r Basic_R_tidyeval-12}
+library(dplyr)
+my_var <- quo(homeworld)
+
+starwars %>%
+  group_by(!!my_var) %>%
+  summarise_at(vars(height:mass), mean, na.rm = TRUE)
+```
+
+Use `enquo` to allow expressions.
+
+```{r Basic_R_tidyeval-13}
+summarise_starwars <-function(col){
+  my_var <- enquo(col)
+
+starwars %>%
+  group_by(!!!my_var) %>%
+  summarise_at(vars(height:mass), mean, na.rm = TRUE)
+}
+
+summarise_starwars(species)
+```
+
+```{r Basic_R_tidyeval-14}
+summarise_starwars(substr(species,1,1))
+```
+
+```{r Basic_R_tidyeval-15, error=TRUE}
+totals_by_col <-function(tbl, grp_col, dbl_col, na.rm=TRUE){
+  grp_col <- enquo(grp_col)
+  dbl_col <- enquo(dbl_col)
+  dbl_nm <- quo_name(dbl_col)
+
+  tbl %>%
+    group_by(!! grp_col) %>% 
+    summarise(!!dbl_nm := sum(!!dbl_col, na.rm = na.rm))
+}
+
+totals_by_col(starwars, gender, height)
+```
+
+### Exercise
+1. Write a function that returns the count of unique values for a column when provided with a table name and a column name.
+
+## Next steps
+1. Continue learning to program with tidyeval in the [dplyr programming vignette](http://dplyr.tidyverse.org/articles/programming.html)

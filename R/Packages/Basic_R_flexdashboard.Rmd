@@ -1,0 +1,208 @@
+# (PART) Building reports {-}
+# Flexdashboard
+`flexdashboard` allows us to build dashboards quickly.
+
+You can use `flexdashboards` to group related data visualisations together, in either a static or a dynamic dashboard. You can include a huge variety of components, divided into columns and rows such as:
+  +Interactive widgets based on JavaScript
+  +R graphics
+  +Tabular data, which can be sorted and filtered
+  +Summaries for highlighting important data 
+  +Gauges for specifying ranges within the data and displaying only those values
+  +Text annotations
+
+Dashboards can be generated with very little code.
+
+```
+---
+title: "Chart Stack"
+output: flexdashboard::flex_dashboard
+---
+    
+### Chart 1
+Add an R chunk here!   
+    
+### Chart 2
+
+Add an R chunk here!  
+```
+
+## Layout
+Flexible options are available and the layout will also adapt itself dynamically to render for mobile devices.
+
+Level 2 markdown headers define columns, and charts will stack vertically within columns.
+
+However, you can also specify `orientation: rows`, to switch the layout from to rows. 
+
+```
+---
+title: "Focal Chart (Top)"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+---
+    
+Row 1
+-------------------------------------
+### Chart 1
+Insert chunk here
+
+Row 2
+-------------------------------------
+### Chart 2
+Insert chunk here 
+    
+### Chart 3
+Insert chunk here
+```
+You can also specify `scroll` and `tabsets` to accommodate the natural height and width of charts which may have a hierarchical importance to the readers. 
+
+### Exercise
+1. Create a flexdashboard file in RStudio
+2. Change the layout to have four charts, two on each row
+
+## Components 
+
+You can use any chart created within standard R graphics with flexdashboard. 
+
+```{r Basic_R_flexdashboard-1}
+plot(mdeaths)
+```
+
+HTML widgets are interactive HTML and JavaScript components that allow interactivity with your data and they're responsive to layout changes. 
+
+Common HTML widgets include:
+  +`Leaflet`
+  +`dygraphs`
+  +`Plotly`
+  
+Use [the gallery](http://gallery.htmlwidgets.org) to see more examples.
+
+```{r Basic_R_flexdashboard-2}
+dygraphs::dygraph(mdeaths)
+```
+
+
+You can include tabular data within flexdashboards in one of two ways:
+  +As a simple tabular display.
+  +As a `DataTable` that includes sorting, filtering, and pagination.
+  
+```{r Basic_R_flexdashboard-3}
+DT::datatable(mtcars)
+```
+
+```{r Basic_R_flexdashboard-4, eval=FALSE}
+shiny::renderDataTable(mtcars)
+```
+
+Sometimes you want to include one or more simple values within a dashboard. You can use the `valueBox` function to display single values along with a title and optional icon.
+
+```{r Basic_R_flexdashboard-5, eval=FALSE}
+flexdashboard::valueBox(1, icon = "fa-pencil")
+```
+
+There are many more components other components that you can use either from flexdashboard, shiny, or other packages. 
+
+### Exercise
+1. Incorporate some of the charts of and tables you've made over the past few days into your 2x2 dashboard
+
+## Sizing
+It's important to be able to emphasise certain elements of your dashboard and the easiest way to do this is to dictate the size of the charts displayed. 
+
+You can modify the default sizing behaviour by applying the `data-width` and `data-height` attributes to rows, columns, or even individual charts. These attributes establish the relative size between charts laid out in the same dimension (horizontal or vertical).
+
+```
+---
+title: "Chart Sizing"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+---
+
+Row {data-height=650}
+-------------------------------------
+
+### Chart 1
+Insert chunk here
+
+Row {data-height=350}
+-------------------------------------
+    
+### Chart 2
+Insert chunk here
+    
+### Chart 3
+Insert chunk here
+```
+
+## Pages 
+Iyou have more than a handful of charts you’d like to include in a dashboard, you may want to consider dividing the dashboard into multiple pages. To define a page just use a level 1 markdown header. Each page you define will have its own top-level navigation tab.
+
+```
+---
+title: "Multiple Pages"
+output: flexdashboard::flex_dashboard
+---
+
+# Page 1
+### Chart 1
+Insert chunk here
+    
+### Chart 2
+Insert chunk here
+   
+# Page 2  
+### Chart 1
+```
+### Exercise
+1. Add a second page that holds two more components
+
+# flexdashboard and shiny
+flexdashboard can incorporate shiny so that you can use flexdashboard as your tool for generating good looking shiny reports quickly.
+
+This is done by adding `runtime: shiny` to a standard flexdashboard and then adding one or more input controls and/or reactive expressions that dynamically drive the appearance of the components within the dashboard. 
+
+```
+---
+title: "A shiny report"
+output: flexdashboard::flex_dashboard
+runtime: shiny
+---
+
+Insert a setup chunk here
+
+## Column {.sidebar}
+Insert a chunk with a `*Input()` functions here
+
+## Column
+
+### Geyser Eruption Duration
+Insert a chunk with a `render*()` function here
+```
+
+## Exercise
+1. Modify your flexdashboard to have a sidebar and use shiny
+
+##Inputs & Outputs
+When you use Shiny within a flexdashboard you’ll be making use of both input elements (e.g. sliders, checkboxes, etc.) and output elements (plots, tables, etc.). Input elements are typically presented within a sidebar and outputs within flexdashboard content panes.
+
+In shiny you have to use matching functions on the server and the UI side. In flexdashboard, you only need to include the server side functions. Any input you generate will get prefixed with `input$`.
+
+```
+sliderInput("bins", "Number of bins:", 
+            min = 1, max = 50, value = 30)
+
+renderPlot({
+  hist(faithful[, 2], breaks = input$bins)
+})
+```
+
+### Exercise
+1. Modify your report to include some useful inputs
+2. Modify your components to change when the inputs are modified
+
+
+
+## Recommended reading
+- [flexdashboard homepage](https://rmarkdown.rstudio.com/flexdashboard/index.html)
+- [Examples](https://rmarkdown.rstudio.com/flexdashboard/examples.html) of flexdashboards
+

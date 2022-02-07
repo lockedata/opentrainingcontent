@@ -1,0 +1,622 @@
+# (PART) Data Science {-}
+
+![](img/RHighlevel.png)
+
+# Exploratory data analysis
+Once data is loaded but before we get down to data science, we need to perform exploratory data analysis to understand our data, identify data quality issues, and hopefully, generate some valuable insights before even doing anything particularly clever.
+
+- `skimr` produces a more useful version of `summary()`
+- `DataExplorer` gives us a data profile report in a single line of code
+- `visdat` and `naniar` for visualising our data
+
+```{r Basic_R_DataScience-1}
+library(tidyverse)
+heroes = read_csv("../data/heroes_information.csv")
+```
+
+## Data profiling
+`skimr` is a great way to improve upon the `summary()` function.
+```{r Basic_R_DataScience-2}
+library(skimr)
+skim(heroes)
+```
+
+The `visdat` and `naniar` packages are great for getting some visualisations about the data, particularly missing values. `naniar` makes use of `UpSetR` for great effect in looking for overlaps in missings - really useful for instance when you get survey data for seeing which questions are part of conditional branches!
+
+```{r Basic_R_DataScience-3}
+library(visdat)
+vis_dat(heroes)
+```
+
+```{r Basic_R_DataScience-4}
+library(naniar)
+library(UpSetR)
+
+heroes %>%
+  as_shadow_upset() %>%
+  upset()
+```
+
+These help with visual and ad-hoc explorations. A nifty, quick way of getting a profile of a dataset is with the `DataExplorer` package.
+
+### Exercises
+Check out the report produced by DataExplorer then explore the powers dataset (`data/super_hero_powers.csv`) with the tools we've used here
+ 
+```{r Basic_R_DataScience-5, eval=FALSE}
+library(DataExplorer)
+create_report(heroes, output_file="heroes.html", output_dir="outputs")
+```
+
+# Feature Engineering
+We need to clean up columns, add new ones, handle missings and so forth. Some of this can/should be done post-sampling to avoid leaking information about the test data into our models inadvertently.
+
+```{r Basic_R_DataScience-6}
+library(tidyverse)
+library(naniar)
+heroes = read_csv("../data/heroes_information.csv")
+powers = read_csv("../data/super_hero_powers.csv")
+```
+
+## Cleaning data
+We can use packages like `forcats`, `stringr`, and `lubridate` to fix values. Using `dplyr` we're able to programmatically fix issues across multiple columns.
+
+```{r Basic_R_DataScience-7}
+replaceLT0 = function(x) ifelse(x < 0, NA, x) 
+# mutate_if takes a dataset, applies a condition to each column, and for each column that returned TRUE applies a function to it
+heroes = mutate_if(heroes, is.numeric, replaceLT0)
+gg_miss_var(heroes) + ggthemes::theme_few() 
+```
+
+For rebasing factors, handling typos etc. we can use the `forcats` package.
+
+- `fct_explicit_na` converts missings into a distinct level. This can be very handy for modelling observations with missings, as there could be some systemic reason for the missings that has predictive value for your model
+- `fct_infreq` reorders a factor so the most common level is first
+- `fct_lump` consolidates low frequency levels into a single level
+- `fct_relabel` applies a function to level labels to do things like remove special characters
+
+![](img/forcats.png)
+
+```{r Basic_R_DataScience-8}
+heroes = mutate_if(heroes, is.character, fct_explicit_na)
+gg_miss_var(heroes) + ggthemes::theme_few() 
+```
+
+```{r Basic_R_DataScience-9}
+fct_count(heroes$Alignment)
+fct_count(fct_infreq(heroes$Alignment))
+fct_count(fct_lump(heroes$Race, 3))
+```
+
+## Lags
+Lagged values are past values brought forward for use as predictive variables. These might be things like the previous payment amount, time spent playing previously etc. 
+
+`lag()` (and `lead()` although it tends to be less relevant whilst building models) returns a previous row's value onto the current row.
+
+```{r Basic_R_DataScience-10}
+lag(1:5)
+```
+
+Use lags to provide prior values, like position 6 months ago:
+```{r Basic_R_DataScience-11}
+lag(1:50, n = 6, default = 0)
+```
+
+Use lags to flag if values changed
+```{r Basic_R_DataScience-12}
+x=rep(c(2,1,1,2),2)
+x==lag(x)
+```
+
+Use lags to determine change
+```{r Basic_R_DataScience-13}
+x=1:15
+(x/lag(x))-1
+```
+    
+
+## Aggregates
+Producing aggregate measures like lifetime value, typical profitability, max months in arrears in the past year, times seen etc are useful measures.
+
+It is worth noting though that if you make aggregates of historic data and use these in a model, going forward you will need those levels of historic data to make predictions.
+
+Find the rolling mean /  max / min / etc... over previous values:
+```{r Basic_R_DataScience-14}
+library(RcppRoll)
+iris %>% 
+  group_by(Species) %>% 
+  mutate(rollMean=roll_meanr(lag(Sepal.Width),
+                             n = 5))%>% 
+  head()
+```
+
+Find the min / max / sum / etc... in all prior observations:
+```{r Basic_R_DataScience-15}
+iris %>% 
+  group_by(Species) %>% 
+  mutate(smallest=cummin(Sepal.Width))%>% 
+  head()
+```
+
+## Extra data
+We can also gain additional features by joining data. [Lise Vidaur](http://perso.ens-lyon.fr/lise.vaudor) has some nifty viz (as seen above re: forcats!) for joins.
+
+```{r Basic_R_DataScience-16}
+left_join(heroes, powers, by=c("name"="hero_names"))
+```
+
+## Reshaping data
+We might also need to reshape data. This is usually what I think of as *unpivoting* my data or *pivoting* it due to my use of Excel.
+
+In R, the function for unpivoting data is `gather()`, like gathering all your data up, and the function for pivoting your data is `spread()`.
+
+`gather()` will need to know what the name should be for column containing our old headers, what the column name should be for the one holding our old cell values, and what columns we do/don't want to unpivot. `spread` will need to know which column is going to be used for headers, which one will become the cells.
+
+```{r Basic_R_DataScience-17}
+powers_long = gather(powers, power, present, -hero_names)
+str(powers_long)
+```
+
+## Exercises
+1. Write a cleaning statement that converts missings encoded as hyphens to NA
+1. Use the `mutate()` function to work out the difference for each hero in weight against the mean for their race
+
+# Sampling
+Sampling data and onwards is a current area of much work in the tidyverse. This stuff is likely to change over the next year or two.
+
+![](img/diagram.png)
+
+## Basic sampling
+We can use `rsample` to build a simple train / test split.
+
+
+```{r Basic_R_DataScience-18}
+library(rsample)
+heroes_split = initial_split(heroes, prop=.7)
+heroes_train = training(heroes_split)
+heroes_test = testing(heroes_split)
+```
+
+## Next level sampling 
+We can then do cross-validation and bootstrapping easily.
+```{r Basic_R_DataScience-19}
+heroes_cross = vfold_cv(heroes_train, V = 10, repeats = 10)
+heroes_boot = bootstraps(heroes_train, times = 50)
+```
+
+```{r Basic_R_DataScience-20}
+library(furrr)
+plan(multicore)
+mtcars %>% 
+  modelr::bootstrap(100) %>% 
+  .$strap %>% 
+  future_map(~glm(vs ~ mpg, data=.)) %>% 
+  future_map_dfr(., broom::tidy, .id="id") ->
+  modelparams
+```
+
+```{r Basic_R_DataScience-21}
+modelparams %>% 
+  ggplot(aes(x=estimate))+
+  geom_density()+
+  facet_wrap(~term,scales = "free")
+```
+
+## Exercises
+1. Look at the flights dataset in the `nycflights13` package. Take a sample and build a model using it.
+1. Using bootstrapping, what does the spread of coefficient values for the various columns look like for your model?
+
+
+## Repeatable feature engineering
+We can then use the `recipes` package to produce reusable feature engineering models that retain hyperparameters from the training data. This makes it ideal for procesing test, validation, and production data.
+
+We have a few core bits of vocabulary to think about:
+- a `recipe` is a set of instructions from getting something done
+- a `step` is a specific part of the recipe
+- a `prep`ared recipe is one where you've worked out what you need to do in your steps in relation to your specific ingredients
+- a `baked` dataset is one that has had the prepared recipe applied to it
+- we can squeeze the prepared model i.e. `juice` it, to extract stuff like resampled rows
+
+There are many `steps` we can use in our recipes and we can also write our own custom steps.
+
+```{r Basic_R_DataScience-22, eval=FALSE}
+library(recipes)
+
+train %>% 
+  recipe(arr_delay~.) %>% 
+  step_rm(dep_delay, year, time_hour) %>% 
+  step_center(all_numeric()) %>% 
+  step_scale(all_numeric()) %>% 
+  step_nzv(all_nominal()) %>% 
+  prep() ->
+  fe_cleaner
+
+(train_cleaned<-bake(fe_cleaner, train))
+```
+
+# Modelling
+
+- There's packages like intubate to make it a bit easier to build models like linear regression but this is still where we often use standard R functions. 
+- The `tidytext` package is for NLP.
+- There is work on forecasting with [`fable`](https://github.com/tidyverts/fable). 
+
+```{r Basic_R_DataScience-23, eval=FALSE}
+train_cleaned %>% 
+  lm(arr_delay ~ as.factor(month) + as.factor(day) + hour , data=.) ->
+  initial_lm
+
+initial_lm
+
+flights %>% 
+  bake(fe_cleaner,.) %>% 
+  modelr::bootstrap(5) %>% 
+  pluck("strap") %>% 
+  map(~lm(arr_delay~hour+day+month, data=.)) %>% 
+  map_df(tidy, .id="bootstrap")
+```
+
+## keras (and tensorflow)
+Let's looks at a vignette!
+
+## h2o.ai
+```{r Basic_R_DataScience-24, eval=FALSE}
+library(h2o)
+h2o.init()
+h_train<-as.h2o(train_cleaned)
+h_test<-as.h2o(bake(fe_cleaner, test))
+h2o.automl(y= "arr_delay",
+           training_frame = h_train, 
+           validation_frame = h_test,
+           max_runtime_secs = 60)
+```
+
+# Evaluation
+The packages `broom` and `yardstick` are tidy functions for working with model objects.
+```{r Basic_R_DataScience-25}
+heroes_lm = lm(Weight ~ Gender + Race  + Alignment , data=heroes)
+```
+
+## Accessing the model
+The `broom` package has the ability to grab information from many models.
+
+The `tidy()` function retrieves coefficients. 
+
+```{r Basic_R_DataScience-26}
+library(broom)
+tidy(heroes_lm)
+```
+
+The `glance()` returns measures of fit.
+
+```{r Basic_R_DataScience-27}
+glance(heroes_lm)
+```
+
+The `augment()` function returns the training data with the fitted values and errors.
+
+```{r Basic_R_DataScience-28}
+augment(heroes_lm)
+```
+
+## Evaluating performance
+We can extract specific measures for evaluation using the `yardstick` package once some data has been scored.
+
+```{r Basic_R_DataScience-29}
+library(yardstick)
+rmse(augment(heroes_lm), truth= Weight, estimate = .fitted)
+```
+
+
+# Linear regression
+```{r Basic_R_DataScience-30, include=FALSE}
+library(tidyverse)
+library(modelr)
+library(ggplot2)
+library(broom)
+library(FFTrees)
+```
+
+
+## Linear regression
+Purpose: perform a line of best fit analysis to predict a continuous variable
+
+```{r Basic_R_DataScience-31, echo=FALSE}
+ggplot(iris, aes(x=Petal.Width, y=Sepal.Length))+
+  geom_point()+
+  geom_smooth(method='lm',se = FALSE)
+```
+
+## Function
+```{r Basic_R_DataScience-32}
+lm(Sepal.Length~Petal.Width, data = iris)
+```
+
+## Using the tidyverse
+```{r Basic_R_DataScience-33}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .)
+```
+
+## Summarising the model
+
+```{r Basic_R_DataScience-34}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  summary()
+```
+
+## Extracting coefficients
+
+```{r Basic_R_DataScience-35}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  coefficients()
+```
+
+## Extracting fitted values
+
+```{r Basic_R_DataScience-36}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  fitted() %>% 
+  plot()
+```
+
+## Base R predictions
+
+```{r Basic_R_DataScience-37}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  predict(data.frame(Petal.Width = 1:6))
+```
+
+## Model summary statistics
+
+```{r Basic_R_DataScience-38}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  broom::glance()
+```
+
+## Fitted values and errors
+
+```{r Basic_R_DataScience-39}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  broom::augment()
+```
+
+## tidyverse predictions
+
+```{r Basic_R_DataScience-40}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) ->
+  irismodel
+
+iris %>% 
+  sample_frac(.3) %>% 
+  add_predictions(irismodel)
+```
+
+## Exercises
+1. Using the dataset airquality, build some models predicting the month based on weather attributes
+2. Using AIC as your selection criteria, which of your models performed best?
+
+# Logistic regression
+
+## Logistic regression
+Purpose: get a probability that a discrete outcome will occur
+
+```{r Basic_R_DataScience-41, echo=FALSE}
+ggplot(mtcars, aes(x=mpg, y=vs))+
+  geom_point()+
+  geom_smooth(method="glm",se = FALSE, method.args = list(family = "binomial"))
+```
+
+## Function
+```{r Basic_R_DataScience-42}
+glm(vs~mpg, data = mtcars, family="binomial")
+```
+
+## Using the tidyverse
+```{r Basic_R_DataScience-43}
+mtcars %>% 
+  glm(vs~mpg, ., family="binomial")
+```
+
+
+## Summarising the model
+
+```{r Basic_R_DataScience-44}
+mtcars %>% 
+  glm(vs~mpg, ., family="binomial") %>% 
+  summary()
+```
+
+## Extracting coefficients
+
+```{r Basic_R_DataScience-45}
+mtcars %>% 
+  glm(vs~mpg, ., family="binomial") %>% 
+  coefficients()
+```
+
+## Getting the fitted values
+
+```{r Basic_R_DataScience-46}
+mtcars %>% 
+  glm(vs~mpg, ., family="binomial") %>% 
+  fitted() %>% 
+  plot()
+```
+
+## Base R prediction
+
+```{r Basic_R_DataScience-47}
+to_prob<-rlang::as_function(~(exp(.)/(1+exp(.))))
+mtcars %>% 
+  glm(vs~mpg, ., family="binomial") %>% 
+  predict(data.frame(mpg = 10:35)) %>% 
+  to_prob()
+```
+
+## Getting summary statistics
+
+```{r Basic_R_DataScience-48}
+mtcars %>% 
+  glm(vs~mpg, ., family="binomial") %>% 
+  broom::glance()
+```
+
+## Getting fitted values and errors
+
+```{r Basic_R_DataScience-49}
+mtcars %>% 
+  glm(vs~mpg, ., family="binomial") %>% 
+  broom::augment()
+```
+
+## Exercises
+1. Load the MASS library and build some candidate models for the dataset `birthwt` trying to predict the column `low`
+2. Using AIC as your selection criteria, which of your models performed best?
+
+# Decision trees
+
+## Decision trees
+Purpose: predict a discrete outcome
+
+
+```{r Basic_R_DataScience-50, echo=FALSE}
+titanic %>% 
+  FFTrees(survived ~., data=.) %>% 
+  plot(main = "Titanic", 
+     decision.names = c("Died", "Survived"))
+```
+
+## Function 
+```{r Basic_R_DataScience-51}
+FFTrees(survived ~., data=titanic)
+```
+
+## Using the tidyverse
+```{r Basic_R_DataScience-52}
+titanic %>% 
+  FFTrees(survived ~., .)
+```
+
+## Getting an overview
+
+```{r Basic_R_DataScience-53}
+titanic %>% 
+  FFTrees(survived ~., .) %>% 
+  summary()
+```
+
+## Getting a visual overview
+
+```{r Basic_R_DataScience-54}
+titanic %>% 
+  FFTrees(survived ~., .) %>% 
+  plot()
+```
+
+
+## Getting variable importance
+
+```{r Basic_R_DataScience-55}
+titanic %>% 
+  FFTrees(survived ~., .) %>% 
+  plot(what="cues")
+```
+
+## Making predictions
+
+```{r Basic_R_DataScience-56}
+titanic %>% 
+  sample_n(10) ->
+  testdf
+
+titanic %>% 
+  FFTrees(survived ~., .) %>% 
+  predict(.,data=testdf) %>% 
+  plot()
+```
+
+## Exercises
+1. Build a decision tree for predicting the `y` column in the `bank` dataset
+2. What are the most important factors in this tree?
+
+# Sampling
+
+## Sampling
+To prevent your model from being too specific i.e. overfitted, you should only build a model on part of your data. A good model doesn't see much loss of accuracy when tested, an overfitted model will.
+
+## Basic sampling
+```{r Basic_R_DataScience-57}
+titanic %>% 
+  mutate(id=row_number()) ->
+  tidf
+
+tidf %>% 
+  sample_frac(.7) ->
+  training
+
+tidf %>% 
+  anti_join(training) ->
+  testing
+
+training %>% 
+  dplyr::select(-id) %>% 
+  glm(survived ~., ., family="binomial") %>% 
+  predict(testing) ->
+  testoutcome
+```
+
+## Using the tidyverse
+
+```{r Basic_R_DataScience-58}
+library(modelr)
+titanic %>% 
+  resample_partition(c(training=.7, testing=.3)) ->
+  splits
+
+splits$training %>% 
+  as.data.frame() ->
+  training
+
+splits$testing %>% 
+  as.data.frame() ->
+  testing
+
+training %>% 
+  glm(survived ~., ., family="binomial") %>% 
+  predict(testing) ->
+  testoutcome
+```
+
+## Bootstrapping
+Use bootstrapping to take many different training sets and construct models and blend the results.
+
+
+# R formulae
+
+
+
+
+## Formula
+R uses a formula system for specifying a model.
+
+- You put the outcome variable on the left
+- A tilde (`~`) is used for saying "predicted by"
+- Exclude an intercept term by adding `-1` to your formula
+- You can use a `.` to predict by all other variables e.g. `y ~ .`
+- Use a `+` to provide multiple independent variables e.g. `y ~ a + b`
+- You can use a `:` to use the interaction of two variables e.g. `y ~ a:b`
+- You can use a `*` to use two variables and their interaction e.g. `y ~ a*b`
+- You can construct features on the fly e.g. `y ~ log(x)` or use `I()` when adding values e.g. `y ~ I(a+b)`
+
+For more info, check out `?formula`
+
+## Useful parameters
+- `na.action` can be set to amend the handling of missings in the data
+- `model`,`x`,`y` controls whether you get extra info about the model and data back. Setting these to `FALSE` saves space
+

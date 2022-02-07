@@ -1,0 +1,59 @@
+
+# Feature reduction
+Especially with traditional model types, we want to avoid overfitting by not including all our variables in our model.
+
+## Removing variables
+One way to reduce columns in our model is to discard candidate features before they enter our model.
+
+### High or low variance columns
+
+```{r 05_MOD19-1}
+library(caret)
+data(BloodBrain)
+nzvcols<-nearZeroVar(bbbDescr, names=TRUE)
+nzvcols
+```
+
+### Exercise
+1. Load `titanic3` from PASWR
+2. Remove the body column
+3. Do any of the columns exhibit variance extremes such that we should get rid of them?
+
+## Highly correlated variables
+We should remove columns that exhibit high correlation. The caret package has a function for identifying columns to remove based on a correlation matrix.
+
+```{r 05_MOD19-2}
+hccols<-findCorrelation(cor(bbbDescr),names = TRUE)
+hccols
+```
+
+### Exercise
+1. Are there any highly correlated variables one could remove from the titanic3 dataset?
+
+## De-selecting variables
+We can additionally remove columns with low predictive power. We can use variable importance to see which ones add little value to the model.
+
+```{r 05_MOD19-3}
+bbbData<-bbbDescr[,setdiff(colnames(bbbDescr),c(nzvcols,hccols))]
+mymodel<-lm(logBBB~., data=bbbData)
+varImp(mymodel)
+```
+
+
+
+### Exercise
+1. Run variable importance for a model with all the variables included for predicting survival using your training data. Which ones would you remove? 
+
+
+## Combining variables
+### Principal Component Analysis (PCA)
+PCA reduces features to expressions of variance. It works on scaled numeric data. View a [visual explanation of PCA](http://setosa.io/ev/principal-component-analysis/)
+
+```{r 05_MOD19-4}
+pre<-preProcess(bbbData, method = c("center","scale","pca"))
+head(predict(pre,bbbData))
+```
+
+
+### Exercise 
+1. Run PCA for your trimmed `titanic3` dataset, how many principal components does the data exhibit?

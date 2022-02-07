@@ -1,0 +1,43 @@
+# Netlify
+
+[Netlify](https://netlify.com/) is a hosting service designed for static sites. For most usecases, it is even free to use!
+
+You can get started with Netlify by signing up with your GitHub user account. Once you've registered you can start deploying sites and using custom domain names etc.
+
+One of the best things about Netlify is the fact that you can deploy a site from a GitHub repositor. And not just once, but every time there is a change on the repository via a commit. This enables your site to be updated automatically.
+
+The netlify build process of your site is configurable with a `netlify.toml` file. A typical `netlify.toml` configuration file for a Hugo website looks like:
+
+```toml
+[build]
+    command = "hugo --enableGitInfo --minify"
+    publish = "public"
+
+[build.environment]
+    HUGO_VERSION = "0.70.0"
+
+[context.production.environment]
+    HUGO_ENV = "production"
+    
+[context.deploy-preview]
+    command =  "hugo  --enableGitInfo  --minify --buildFuture --ignoreCache -b $DEPLOY_PRIME_URL"
+
+[context.branch-deploy]
+    command =  "hugo  --enableGitInfo --minify  --buildFuture --ignoreCache -b $DEPLOY_PRIME_URL"
+```
+
+Key aspects are the build `command` ie how the static site is produced and the `publish` directory that the static site files can be uploaded from.
+
+As well as the core site hosting functionality, Netlify provides a number of other useful features, including:
+
+- the ability to collect data from forms,
+- running code written as AWS Lambda functions for API-based processes,
+- supports login capabilities for your website, and
+- provides analytics without PII
+
+Many of these capabilities have a free tier or a relatively low cost per month, enabling you to deploy not just basic static sites but also websites that provide ecommerce capabilities and more.
+
+## Exercise
+1. Deploy your Hugo Academic Quickstart website repository to Netlify
+2. Amend the site name
+3. Make an update to your website content and check the Deploys to make sure the website updated correctly

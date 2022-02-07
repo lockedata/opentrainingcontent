@@ -1,0 +1,173 @@
+# Shiny Modules
+
+## What's a Shiny Module?
+A reusable block of Shiny code that can be used in multiple places.
+
+It must contain a server function and can include corresponding UI and Input functions.
+
+Each module contains a name space so each instance generates it own unique input and output IDs.
+
+## Example
+```{r eval=FALSE}
+library(shiny)
+mod_sample_ui <- function(id){
+  ns <- NS(id)
+  tagList(
+  p(id)
+  )
+}
+mod_sample_server <- function(input, output, session){
+  ns <- session$ns
+  print("yo")
+}
+shinyApp(
+  ui=fluidPage(
+    mod_sample_ui("1st"),
+    mod_sample_ui("2nd")),
+  server=function(input, output, session){
+    callModule(mod_sample_server,"1st")
+    callModule(mod_sample_server,"2nd")
+  }
+)
+```
+
+## Shiny Module structure
+### Contents
+Building a module requires a few functions that will typicaly reside in the R directory of a package, in a file sourced by a shiny app, or included in a shiny app file.
+
+- A "server" function accepting `input`,`output`, and `session` at a minimum
+- A "UI" function accepting an `id`
+- An "input" function accepting an `id`
+
+As these are functions, they can be contained within a package structure and documented like any other function to provide additional help to Shiny app developers.
+
+We recommend the [{golem}](https://github.com/ThinkR-open/golem) package for quickly creating a module starter file.
+
+## Inputs
+Shiny modules can consume  module specific inputs or be passed extra values via additional arguments to the module function. 
+
+Inputs can be generated and used within a module. 
+
+- These won't be accessible outside the module, by default.
+- To correctly identify such inputs, wrap the labels in inputs and outputs in UI functions with `ns()`.
+
+```{r eval=FALSE}
+localinput_server = function(input, output, session){
+  output$text = renderText(input$name)
+}
+
+localinput_ui = function(id){
+  ns <- NS(id)
+  tagList(textInput(ns("name"),"Insert name here"), p(id),
+          textOutput(ns("text")))
+}
+
+shinyApp(
+  ui=fluidPage(
+    localinput_ui("local"),
+    localinput_ui("local2")),
+  server=function(input, output, session){
+    callModule(localinput_server,"local")
+    callModule(localinput_server,"local2")
+  }
+)
+```
+
+Here, we can see how a global variable needs to be passed to a module.
+
+- Module server code by default changes `input$i` to `input$ns-i` so global inputs are not easily referenced.
+- A common way to get around this is to create an extra argument to the server function and pass the input as a reactive variable into it.
+
+```{r eval=FALSE}
+globalinput_server = function(input, output, session, name){
+  output$text = renderText(name())
+}
+
+globalinput_ui = function(id){
+  ns <- NS(id)
+  tagList(textOutput(ns("text")))
+}
+
+shinyApp(
+  ui=fluidPage(
+    textInput("name","Insert name here"),
+    globalinput_ui("global")),
+  server=function(input, output, session){
+    callModule(globalinput_server,"global",
+               name = reactive(input$name))
+  }
+)
+```
+
+
+## Outputs
+The typical outputs in Shiny are supported in modules. They need to be referenced as being within the namespace inside the UI function i.e. `renderText(ns("textthingy"))`.
+
+```{r eval=FALSE}
+plotoutput_server = function(input, output, session){
+  output$plot = plotOutput(
+    ggplot2::qplot(x = Sepal.Width, y=Sepal.Length, data=iris)
+  )
+}
+
+plotoutput_ui = function(id){
+  ns <- NS(id)
+  tagList(
+    renderPlot(ns("plot"))
+  )
+}
+
+shinyApp(
+  ui=fluidPage(
+    plotoutput_ui("plot")
+    ),
+  server=function(input, output, session){
+    callModule(plotoutput_server,"plot")
+  }
+)
+```
+
+
+
+## Reactivity
+Additionally, modules as functions can have outputs consumable inside the application. 
+
+- These can be things like data.frames so that multiple dependant modules can rely on the same result instead of each doing the processing seperately.
+- The outputs are typically reactive
+
+```{r eval=FALSE}
+sharedoutput_server = function(input, output, session){
+  reactive(dplyr::sample_n(iris, input$n))
+}
+
+sharedoutput_ui = function(id){
+  ns <- NS(id)
+  tagList(numericInput(ns("n"), "n rows",value = 50))
+}
+
+output_server = function(input, output, session, shared){
+  output$text = renderText(mean(shared()$Sepal.Width))
+}
+
+output_ui = function(id){
+  ns <- NS(id)
+  tagList(p(textOutput(ns("text"))))
+}
+
+shinyApp(
+  ui=fluidPage(
+    sharedoutput_ui("shared"),
+    output_ui("one"),
+    output_ui("two")),
+  server=function(input, output, session){
+    shared = callModule(sharedoutput_server,"shared")
+    callModule(output_server,"one",shared=shared)
+    callModule(output_server,"two",shared=shared)
+  }
+)
+```
+
+## Recommended reading
+- [Original Modlarizing Shiny App Code post](https://shiny.rstudio.com/articles/modules.html)
+- [{golem}](https://github.com/ThinkR-open/golem)
+- [Shiny Module Design Patterns](https://github.com/stephlocke/shinymodulesdesignpatterns)

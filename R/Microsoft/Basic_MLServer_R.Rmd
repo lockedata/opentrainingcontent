@@ -1,0 +1,103 @@
+# Analysing big data with Microsoft ML Server
+# 1. Overview of the Microsoft data science stack
+
+
+## Microsoft Data Science
+Purpose of data science is to understand, analyze, visualize data and predict the outcome
+We will be getting data from different sources.
+
+### from CSV
+```{r reading from CSV}
+csv_df <- read.csv("C:\\DataTK\\git\\trainingportal\\Data\\csv1.csv")
+
+#quick overview
+head(csv_df)
+```
+### from SQL databases
+```{r reading from SQL Database}
+library(RODBC)
+con <- odbcDriverConnect('driver={SQL Server};server=TOMAZK\\MSSQLSERVER2017;database=Adventureworks;trusted_connection=true')
+db_df <- sqlQuery(con, 'select top 10 * from [Sales].[vSalesPerson]')
+close(con)
+```
+
+### or from any other data types like SAS files, txt files, Excel Files, XDF files and many others
+```{r reading from text files}
+txt_df <- read.delim2("C:\\DataTK\\git\\trainingportal\\Data\\sample_data.txt", header=TRUE, sep="\t")
+#quickly inspect data
+head(txt_df)
+```
+
+### Using data.frames
+Data scientists will have data always arrainged into data.frames
+```{r getting data into data frames}
+#we can convert and imported dataset to dataframe
+csv_df2 <- data.frame(csv_df)
+
+#and check the types of both objects
+str(csv_df2)
+```
+
+
+
+## What data scientits do
+Therer are number of different libraries that support the work of data scientist and for machine learning
+
+```{r Basic_MLServer_R-1}
+# to warm-up
+
+# Let's create a simple dataset
+dset1 <- data.frame(x=c(10, 19, 37, 50, 62, 69, 86), y = c(40, 58, 69, 176, 165, 261, 271))
+plot(dset1)
+
+#adding the best fit line 
+abline(lm(y~., data=dset1), col="red")
+
+
+# but what if there are some extreme values in the dataset (outliers, spikes)
+dset2 <- data.frame(x=c(10, 19, 37, 50, 62, 69, 86,33,35), y = c(40, 58, 69, 176, 165, 261, 271,263,271))
+plot(dset2)
+
+#again we add the best fit line
+abline(lm(y~., data=dset2), col="green")
+
+
+
+#now combine both plots, for easier comparison and to see the difference in the outliers effect:
+par(mfrow=c(1,2))
+
+plot(dset1)
+abline(lm(y~., data=dset1), col="red")
+
+plot(dset2)
+abline(lm(y~., data=dset2), col="green")
+
+par(mfrow=c(1,1))
+
+#quickly check the parameters of linear regression
+# to see what kind of impact those three outliers have
+lm1 <- lm(y~., data=dset1)
+lm2 <- lm(y~., data=dset2)
+
+#let's check where the best fit line crosses Y-axis
+# we will be looking for INTERCEPT value
+lm1$coefficients
+lm2$coefficients
+
+#now that we know, that the intercept value has changes
+#quicly observe how the values of residuals in case of linear regression 
+# with outliers have changed dramatically
+# for first 7 points (which are same values of X and Y in both datasets), the error of best fit (aka:prediction) has
+# multiplied
+lm1$residuals
+lm2$residuals
+
+
+```
+
+
+## Exercises
+1. What is data science?
+2. Why is data cleaning, data gathering and data preparation important for every further data analysis?
+
+

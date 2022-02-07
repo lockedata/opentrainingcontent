@@ -1,0 +1,474 @@
+# (PART) Microsoft R {-} 
+# ML Server
+
+## About
+- Runs R and Python
+- Has special sauce packages
+- Allows for remote computations
+
+## Names
+- Revolution R (<2016)
+- Microsoft R Server (<2017)
+- Microsoft ML Server (2017-?)
+
+## Contents
+| environment   | data sources           | most R packages       | `RevoScaleR`       |
+|---------------|------------------------|-----------------------|--------------------|
+| local         | `data.frame`           | &#10003;              | &#10003;           |
+| local         | flat files (CSV)       |     &#10003;                   | &#10003;           |
+| local         | XDF                    |                       | &#10003;           |
+| remote        | SQL Server table       |                       | &#10003;           |
+| remote        | HDFS (Hive, parquet)   |                       | &#10003;           |
+| remote        | HDFS (XDFD)            |                       | &#10003;           |
+
+## Key things to think about
+- How much data do you really need to analyse in one go?
+- What data sources do you need to connect to?
+- What sort of locations will you be publishing your models?
+
+## Packages
+Many of these packages are available to you through CRAN.
+
+| Package | Description |
+|---------|-------------|
+|checkpoint	|Install packages from snapshots on the checkpoint server for reproducibility (maintained by Microsoft)|
+|curl	| A modern and flexible web client for R
+|deployrRserve	| DeployR fork of the popular R package, Rserve for use with Microsoft R Server Linux & Windows Only (maintained by Microsoft)|
+|doParallel	|Provides a parallel backend for the %dopar% function using the parallel package (maintained by Microsoft)|
+|foreach	|Support for the foreach looping construct. Foreach is an idiom that allows for iterating over elements in a collection, without the use of an explicit loop counter (maintained by Microsoft)|
+|iterators|	Support for iterators, which allow a programmer to traverse through all the elements of a vector, list, or other collection of data (maintained by Microsoft)|
+|jsonlite	|A Robust, High Performance JSON Parser and Generator for R|
+|MicrosoftR	| Umbrella package with licenses and notices for all Microsoft R packages (maintained by Microsoft)|
+|png	| Read and write PNG images|
+|olapR | Conenct to SSAS cubes |
+|R6	|Classes with Reference Semantics|
+|RevoIOQ	|Test suite for Microsoft R products (maintained by Microsoft)|
+|RevoMods	|Microsoft modifications and extensions to standard R functions (maintained by Microsoft)|
+|RevoUtils	|Utility functions for Microsoft R (maintained by Microsoft)|
+|RevoUtilsMath	|Utility functions for managing math threading (included with the MKL download) Linux & Windows Only (maintained by Microsoft)|
+|RODBC	| An ODBC database interface. Windows Only|
+|RUnit	| R functions implementing a standard Unit Testing framework, with additional code inspection and report generation tools |
+|translations	| While this is a not a standard package, it is part of the standard R build and contains a compilations of the localized versions of R's messages. |
+
+As well as these I recommend [`dplyrXdf`](https://github.com/RevolutionAnalytics/dplyrXdf) for workinng with dplyr.
+
+## Chunks
+`RevoScaleR` package stores the dataset on disk (hard drive) and loads it only a **chunk** at a time (where each chunk is a certain number of rows) for processing (reading or writing). Once a chunk is processed, it then moves to the next chunk of the data. By default, the **chunk size** is set to 500K rows, but we can change it to a lower number when dealing with *wider* datasets (hundreds or thousands of columns), and a larger number when dealing with *longer* data sets (only a handful of columns).
+
+So data in `RevoScaleR` is *external* (because it's stored on disk) and *distributed* (because we process it chunk-wise).
+
+# Typical workflows
+
+## Local with R
+1. Collect data with RODBC or something
+2. Clean up data
+3. Build model
+4. Make model useful later
+   + Save model object to disk
+   + Make into an API
+
+## Local with Microsoft R Client
+1. Collect data with RODBC or something
+2. Turn into an xdf
+2. Clean up data with `dplyrXdf`
+3. Build model using an rx* function
+4. Make model useful later
+   + Save model object to disk using `rxSerializeModel`
+   + Make into an API using `mrsdeploy`
+
+## Semi-local
+1. Connect to data using RevoScaleR
+2. Clean up data with `rx*` functions
+3. Build model using an `rx*` function
+4. Make model useful later
+   + Save model object to disk using `rxSerializeModel`
+   + Make into an API using `mrsdeploy`
+
+## Remote
+1. Write code
+1. Run locally on a sample
+2. Send code to remote server with `mrsdeploy`
+
+# Using Microsoft Client
+## RStudio
+1. Make the Client your default R exe by going to Tools > Global Options > R version
+2. Restart RStudio
+
+![](img/rversions.png)
+
+## Libraries
+```{r Basic_R_MLServer-1}
+library(DBI)
+library(odbc)
+library(tidyverse)
+
+if(!require(devtools)) install.packages("devtools")
+if(!require(dplyrXdf)) devtools::install_github("RevolutionAnalytics/dplyrXdf")
+library(dplyrXdf)
+```
+
+# Workflow
+## Turn some data into an xdf
+```{r Basic_R_MLServer-2}
+if(!require(ggplot2movies)) install.packages("ggplot2movies")
+library(ggplot2movies)
+
+imdb_movies <- rxDataStep(movies, "movies.xdf", overwrite=TRUE)
+```
+
+You can get an overview of the table with `rxGetInfo()` as opposed to the usual `str()` and `summary()`.
+
+```{r Basic_R_MLServer-3}
+rxGetInfo(imdb_movies, verbose = 1)
+```
+
+
+### Exercise
+1. Install `nycflights13` if it isn't already installed
+2. Make an xdf for `nycflights13::flights`
+
+## Use dplyrXdf
+You can then point at an xdf and use the sorts of dplyr querying we're used to. 
+
+When we assign into an object, this is also an xdf. This means to view the results you have to use something that accesses the "data.frame bit" of the object. 
+
+
+```{r Basic_R_MLServer-4}
+imdb_movies %>% 
+  filter(length < 60*5 ) %>% 
+  group_by(Action) %>% 
+  summarise(mean(rating)) ->
+  action_or_not
+
+head(action_or_not)
+```
+
+### Exercises
+1. Produce some summaries to help us understand the data
+2. Read the docs for a data dictionary
+
+## dplyrXdf limitations
+The supported tidyverse verbs currently supported are:
+- `filter` and `select` to choose rows and columns
+- `mutate` and `transmute` to do data transformation
+- `group_by` to define groups
+- `summarise` to carry out computations on (un)grouped data
+- `arrange` to sort by variables
+- `rename` to rename columns
+- `distinct` to drop duplicates
+- `left_join`, `right_join`, `inner_join` and `full_join`
+- `anti_join` and `semi_join`
+- `union` and `union_all`
+
+This means if you want to use another verb that is not supported, you need to convert to a data.frame / data_frame first.
+
+```{r Basic_R_MLServer-5}
+imdb_movies %>% 
+  filter(length < 60*5 ) %>% 
+  group_by(Action, Romance) %>% 
+  summarise(avg=mean(rating)) %>% 
+  as_data_frame() %>% 
+  spread(Romance,avg)
+```
+
+## Using RevoScaleR for transformation
+Instead of using dplyrXdf, which is not currently on CRAN, you could use RevoScaleR functions:
+- `rxDataStep`
+    + Drop columns
+    + Filter rows
+    + Apply transformations
+    + Drop missings
+    + Slice data
+- `rxFactors` for recoding factors
+
+```{r Basic_R_MLServer-6}
+imdb_movies %>% 
+  rxDataStep(outFile="../samples/movies_filtered.xdf",
+         rowSelection=(length < 60*5),
+         transforms=list(Action=factor(Action))  , overwrite=TRUE
+            ) %>% 
+  head()
+  
+```
+
+## Building plots
+Unfortunately xdf's are not compatible with ggplot2  -- you would need to convert to a data.frame first. Alternatively there are some plot functions available to us in RevoScaleR.
+
+Plots in RevoScaleR are:
+
+- `rxHistogram` for box charts
+- `rxLinePlot` for line charts
+
+These plots take:
+
+- `formula`
+- `data`
+- lots and lots of other arguments that can do
+    + formatting
+    + variable transformation
+    + filtering records
+
+The formula should be like `y ~ x` and in a histogram the `y` isn't required. Additionally, you can add fields to the facetting by putting a `| field + field`. Facet variables must be factors for the rx functions, you can use `F()` inside the formula to convert columns.
+
+
+```{r Basic_R_MLServer-7}
+imdb_movies %>% 
+  filter(length < 60*5 ) %>% 
+  RevoScaleR::rxHistogram(~rating | F(Action) + F(Romance), data=.)
+    ```
+
+```{r Basic_R_MLServer-8}
+imdb_movies %>% 
+  filter(length < 60*5 ) %>%
+  mutate(rnd_rating=factor(floor(rating)),
+         Action=factor(Action))%>% 
+  group_by(Action, rnd_rating) %>% 
+    summarise(budget=mean(budget))  %>% 
+  RevoScaleR::rxLinePlot(budget~rnd_rating | Action, data=.)
+```
+
+### Exercises
+1. Produce a chart that shows the distribution of flights by month for each year
+
+## Sampling data
+We shouldn't work on all of our data for building models. We need to take a dataset for training and a dataset for testing our model.
+
+Note that you can't perform sampling with replacement particularly easily using the XDFs -- as a consequence bootstrapping or oversampling are difficult things to do.
+
+```{r Basic_R_MLServer-9}
+imdb_movies %>% 
+  sample_frac(0.7) ->
+  movies_training
+
+imdb_movies %>% 
+  anti_join(movies_training) ->
+  movies_testing
+```
+
+A faster but less readable method is using `rxSplit()` -- this will create a list object with two elements.
+
+```{r Basic_R_MLServer-10}
+create_partition <- function(xdf,
+    partition_size = 0.7) {
+    splitDS <- rxSplit(
+    inData = xdf,
+    transforms = list(traintest = factor(ifelse(
+    rbinom(.rxNumRows,
+    size = 1, prob = splitperc),
+    "train",
+    "test"
+    ))),
+    transformObjects = list(splitperc = partition_size),
+    outFileSuffixes = c("train", "test"),
+    splitByFactor = "traintest",
+    overwrite = TRUE
+    )
+    
+    return(splitDS)
+    
+}
+                             
+movies_splits <- create_partition(imdb_movies)
+names(movies_splits) <- c("train", "test")
+```
+
+### Exercise
+Produce an 80:20 sample set from your movies xdf
+
+## Evaluating features
+
+### Correlation
+Check for highly correlated numeric variables using the function `rxCor()`
+
+```{r Basic_R_MLServer-11}
+rxCor(~votes + length + budget , data = movies_training)
+```
+
+This can be used to make decisions about removing variables.
+
+The `findCorrelation()` function from the caret package will identify variables you can remove. If it returns `integer(0)` no variables are recommended for removal.
+
+```{r Basic_R_MLServer-12}
+library(caret)
+movies_training %>% 
+  rxCor(~votes + length + budget , data = .) %>% 
+  caret::findCorrelation()
+```
+
+
+
+### caret
+`caret` is great but doesn't work on XDFs -- you will need to do a conversion to data.frame first. It is however much nicer for feature engineering and doing data preparation.
+
+```{r Basic_R_MLServer-13}
+movies_training %>% 
+  as_data_frame() %>% 
+  caret::nearZeroVar()
+```
+
+### Exercises
+Add some features to the data and remove ones that will not help us
+
+## Build models 
+
+- RevoScaleR functions do not support `y ~ .` notation for formulae.
+- Use `F()` to make variables into factors, inside the model
+- Documentation is pretty good at [Models in RevoScaleR](https://docs.microsoft.com/en-us/machine-learning-server/r/how-to-revoscaler-models)
+
+### Predicting continuous variables
+
+#### Linear regression
+To build a linear model use `rxLinMod` instead of `lm`.
+
+```{r Basic_R_MLServer-14}
+movies_training %>% 
+  rxLinMod(rating~ year +  length + F(Comedy) + F(Action) + F(Romance) + F(Short) + F(Documentary) + F(Animation) + F(Drama), 
+           data=.
+           )
+```
+
+#### Decision Tree
+```{r Basic_R_MLServer-15}
+movies_training %>% 
+  rxDTree(rating~ year + budget + length + Comedy + Action + Romance + Short + Documentary + Animation + Drama, 
+           data=.
+           ) -> 
+  movies_rdtree
+
+movies_rdtree
+```
+
+```{r Basic_R_MLServer-16}
+library(RevoTreeView)
+movies_rdtree %>% 
+  rxAddInheritance() %>% 
+  plot()
+```
+
+#### Exercise
+Construct a model to predict the arr_delay for flights.
+
+### Classification
+#### Logistic regression
+```{r Basic_R_MLServer-17}
+movies_training %>% 
+  rxLogit(Comedy~ rating +year + budget + length + F(Action) + F(Romance) + F(Short) + F(Documentary) + F(Animation) + F(Drama), 
+           data=.
+           ) ->
+  movies_logit
+
+movies_logit
+```
+
+#### Decision Tree
+```{r Basic_R_MLServer-18}
+movies_training %>% 
+  rxDTree(Comedy~ rating +year + budget + length +  Action + Romance + Short + Documentary + Animation + Drama, 
+           data=. , method = "class"
+           ) ->
+  movies_dtree
+
+movies_dtree
+```
+
+##### Pruning the tree
+```{r Basic_R_MLServer-19}
+movies_dtree %>% 
+  rxAddInheritance() %>% 
+  plotcp()
+```
+
+```{r Basic_R_MLServer-20}
+movies_rdtree %>% 
+  rxDTreeBestCp() ->
+  best_cp
+
+movies_dtree %>% 
+ prune(cp=best_cp) ->
+  movies_dtree
+```
+
+##### Visualising the tree
+```{r Basic_R_MLServer-21, eval=FALSE}
+movies_dtree %>% 
+  createTreeView() %>% 
+  plot()
+```
+
+#### Boosted decision trees
+```{r Basic_R_MLServer-22}
+movies_training %>% 
+  rxBTrees(Comedy~ rating +year + budget + length +  Action + Romance + Short + Documentary + Animation + Drama, 
+           data=.
+           )
+```
+
+
+
+```{r Basic_R_MLServer-23, eval=FALSE}
+library(RevoTreeView)
+movies_training %>% 
+  rxDTree(Comedy~ rating +year + budget + length ,
+           data=., class
+           ) -> 
+  movies_dtree
+
+movies_dtree %>% 
+  rxAddInheritance() %>% 
+  plot()
+```
+
+### Clustering
+```{r Basic_R_MLServer-24}
+movies_training %>% 
+  rxKmeans(~ rating +year  + length + Comedy+ Action + Romance + Short + Documentary + Animation + Drama,
+           data=.,numClusters = 10)
+```
+
+#### Exercises
+Produce your own cluster model -- what seem to be the key clustering criteria?
+
+## Evaluation
+
+
+### Predict on new data
+Once you've made predictions you can use R packages to do evaluations.
+
+```{r Basic_R_MLServer-25}
+movies_testing %>% 
+  rxPredict(movies_rdtree, .) %>% 
+  summary()
+```
+
+```{r Basic_R_MLServer-26}
+movies_testing %>% 
+  rxPredict(movies_rdtree, .) ->
+  movies_testing
+
+plot(movies_testing$rating, movies_testing$rating_Pred)
+```
+
+### ROC curves
+```{r Basic_R_MLServer-27}
+movies_testing %>% 
+  rxPredict(movies_dtree, data=., 
+            predVarNames="Comedy_Pred",
+             type="vector") %>% 
+  rxRocCurve(actualVarName="Comedy", predVarNames = "Comedy_Pred", data=.)
+
+```
+
+```{r Basic_R_MLServer-28}
+movies_testing %>% 
+  rxLorenz("Comedy_Pred","Comedy", data=.) %>% 
+  plot()
+```
+
+### Variable importance
+```{r Basic_R_MLServer-29}
+movies_dtree %>% 
+  rxVarImpPlot()
+```
+
+### Exercises
+Predict the clusters for your test movies

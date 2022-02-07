@@ -1,0 +1,240 @@
+```{r Basic_R_IO-1, include=FALSE, message=FALSE}
+library(dplyr)
+library(DBI)
+library(odbc)
+library(readr)
+library(readxl)
+library(openxlsx)
+library(httr)
+```
+
+
+# CSVs
+## Reading CSVs
+```{r Basic_R_IO-2}
+survey<-readr::read_csv("../data/sample.csv")
+```
+
+```{r Basic_R_IO-3}
+survey<-readr::read_csv("../data/sample.csv",
+                        col_names = c("entry","name","icecream","pet", 
+                                      "weekday","floors","yearborn"),
+                        skip=1)
+```
+
+## Writing CSVs
+```{r Basic_R_IO-4}
+readr::write_csv(head(survey),"sample2.csv")
+```
+
+```{r Basic_R_IO-5, echo=FALSE, results='hide'}
+file.remove("sample2.csv")
+```
+
+## Exercises
+1. Load sample.csv with sensible names and use `col_*` functions to convert the date and the weekday columns to sensible data types as you load them.
+2. Write a random sample of the loaded data to a new file
+
+# Spreadsheets
+
+## Reading spreadsheets
+```{r Basic_R_IO-6}
+survey<-readxl::read_excel("../data/sample.xlsx")
+```
+
+```{r Basic_R_IO-7}
+readxl::excel_sheets("../data/sample.xlsx")
+```
+
+
+```{r Basic_R_IO-8}
+survey<-readxl::read_excel("../data/sample.xlsx",
+                        col_names = c("entry","name","icecream","pet", 
+                                      "weekday","floors","yearborn"),
+                        skip = 1)
+```
+
+## Writing spreadsheets
+```{r Basic_R_IO-9}
+writexl::write_xlsx(survey, "sample2.xlsx")
+```
+
+```{r Basic_R_IO-10, echo=FALSE, results='hide'}
+file.remove("sample2.xlsx")
+```
+
+```{r Basic_R_IO-11}
+openxlsx::write.xlsx(survey, "sample2.xlsx")
+```
+
+```{r Basic_R_IO-12, echo=FALSE, results='hide'}
+file.remove("sample2.xlsx")
+```
+
+```{r Basic_R_IO-13}
+openxlsx::write.xlsx(survey, "sample2.xlsx", sheetName="survey")
+```
+
+```{r Basic_R_IO-14, echo=FALSE, results='hide'}
+file.remove("sample2.xlsx")
+```
+
+## Writing spreadsheets
+```{r Basic_R_IO-15}
+openxlsx::write.xlsx(survey, "sample2.xlsx", asTable=TRUE,
+                     startCol=2, startRow=2)
+```
+
+```{r Basic_R_IO-16, echo=FALSE, results='hide'}
+file.remove("sample2.xlsx")
+```
+
+## Exercises
+1. Write a sample of 1000 rows from `nycflights13::flights` to excel, setting the column widths to automatically size (use the help text to find the argument name required)
+
+
+# APIs
+
+## APIs
+APIs are parts of the web you can request (or provide) information from in a way that allows machines to talk to each other.
+
+Each API request needs:
+
+1. A URL
+2. Any authentication info
+3. Parameters / content
+
+## Get data
+```{r Basic_R_IO-17}
+"https://haveibeenpwned.com/api/v2/breaches" %>% 
+  httr::GET() %>% 
+  httr::content(as = "text") %>% 
+  jsonlite::fromJSON() ->
+  breachedsites
+
+head(breachedsites)
+```
+
+## Exercises
+1. Go the HaveIBeenPwned API documentation and get the URL for retrieving a single breach
+2. Use the URL to construct a request to find out if Snapchat have had a breach
+
+# Databases
+## Connections
+```{r Basic_R_IO-18}
+library(DBI)
+library(odbc)
+dbConn<-dbConnect(odbc(),
+          driver="SQL Server",
+          server="mhknbn2kdz.database.windows.net",
+          database="AdventureWorks2012",
+          uid="sqlfamily",
+          pwd="sqlf@m1ly")
+
+sample(dbListTables(dbConn),6)
+```
+
+## SQL
+```{r Basic_R_IO-19}
+betterTblsList<-dbGetQuery(dbConn, "SELECT * FROM information_schema.tables")
+betterTblsList
+```
+
+```{r Basic_R_IO-20, eval=FALSE}
+dbConn %>% 
+  dbGetQuery("select * 
+             from Production.TransactionHistory") ->
+  transactions
+```
+
+```{r Basic_R_IO-21}
+interestingProduct <- 797
+dbConn %>% 
+  sqlInterpolate("select * 
+             from Production.TransactionHistory
+             where productid = ?product",
+             product = interestingProduct) %>% 
+  dbGetQuery(dbConn, .) ->
+  transactions797
+```
+
+## Table fetches
+Currently limited to tables in default schema
+
+```{r Basic_R_IO-22}
+dbConn %>% 
+  dbReadTable("SqlFamily") ->
+  sqlfamily
+```
+
+## Exercises
+1. Open the sampleSQL.r script and run the connection
+2. Bring the four tables from the olympics schema into memory:
+  + Medalist
+  + Sport
+  + Discipline
+  + Event
+
+## Limitations (currently)
+- DBI has limited schema support
+- DBI does not have an easy way to provide multiple values to `IN ()` clauses
+- DBI doesn't support guids
+
+## Writing SQL - JOINS
+Common types of joins are:
+
+- **inner join** for getting only rows matched on both sides
+- **left join** for getting all the rows on the laft hand side with any matching data from the right
+- **cross join** for getting every row on the left joined against every row on the right
+
+##  Writing SQL - JOINS
+```{r Basic_R_IO-23}
+dbConn %>% 
+  dbGetQuery(
+    "select * 
+    from northwind.orders o
+    inner join northwind.[order details] d on o.orderid=d.orderid"
+  ) ->
+  orders
+```
+
+## Writing SQL - WHERE
+Apply clauses that filter out records using the WHERE part of a SQL query. 
+
+Use comparisons, build compound statements with AND and OR, and check for properties like whether a value is missing (IS NULL).
+
+
+```{r Basic_R_IO-24}
+dbConn %>%
+  dbGetQuery(
+    "select *
+    from production.transactionhistory
+    where productid > 800 
+    and quantity > 1"
+  ) ->
+  limited_transactions
+```
+
+## Exercises
+1. Write a query that joins all the olympics data together
+2. Add a filter to the query that restricts the results to only the gold medal winners
+
+## Writing queries - SELECT
+- Refer to all columns with `*`
+- Refer to all columns in a given table with `alias.*`
+- Create new output columns or rename existing columns with `AS`
+- Use `CASE WHEN` to create conditional columns
+
+```{r Basic_R_IO-25}
+dbConn %>% 
+  dbGetQuery(
+    "select o.*,
+      d.unitprice * d.quantity AS TotalCost
+    from northwind.orders o
+    inner join northwind.[order details] d on o.orderid=d.orderid"
+  ) ->
+  orders_slim
+```
+
+## Exercises
+1. Return a subset of columns from your joined up olympics data that you think are most relevant

@@ -1,0 +1,286 @@
+# SQL Server + ML Services
+```{r Basic_R_SQLServer-1, include=FALSE}
+do_eval=TRUE
+```
+
+## Overview
+- Use `sp_execute_external_script` to call R from SQL
+- Store model objects in SQL Server
+- Use certain models in a native PREDICT function
+
+## 2016/2017 Editions
+- Express (w/ Advanced tools) - R Open or base R
+- Standard - R Open or base R
+- Enterprise - ML Server
+
+[SQL Server feature comparison](https://docs.microsoft.com/en-us/sql/sql-server/editions-and-components-of-sql-server-2017#Programmability)
+
+
+## Connecting to our env
+```{r Basic_R_SQLServer-2, eval=TRUE}
+library(DBI)
+library(odbc)
+
+driver   = "ODBC Driver 17 for SQL Server"
+server = "lockedata.database.windows.net"
+database = "datasci"
+uid = "lockedata"
+pwd = "zll+.?=g8JA11111"
+
+dbConn<-dbConnect(odbc(),
+          driver=driver, server=server,
+          database=database, uid=uid,
+          pwd=pwd)
+```
+
+```{r Basic_R_SQLServer-3}
+dbstring <- glue::glue('Driver={driver};Server={server};Database={database};Uid={uid};Pwd={pwd}')
+```
+
+```{r Basic_R_SQLServer-4, eval=TRUE}
+library(RODBCext)
+
+dbstring <- glue::glue('Driver={driver};Server={server};Database={database};Uid={uid};Pwd={pwd}')
+dbconn <- RODBC::odbcDriverConnect(dbstring)
+```
+
+## Calling R from SQL Server
+Using the stored procedure `sp_execute_external_script` we can call R from SQL. We can also call Python too!
+
+The things we need to have in our stored procedure call are:
+
+1. A language `N'R'`
+2. Some valid R code `N'OutputDataSet <- InputDataSet'`
+3. Some input data `N'SELECT 1 as Col'`
+
+If you want your output dataset to have names, you also have to add `WITH RESULTS SET (())` and provide a comma seperated set of column definitions.
+
+There are default variable names of `InputDataSet` and `OutputDataSet` that you can use in the R script to refer to the input and output.
+```{sql Basic_R_SQLServer-5, connection=dbConn, eval=do_eval}
+EXECUTE sp_execute_external_script
+        @language = N'R'
+        ,@script = N'OutputDataSet <- InputDataSet'
+        ,@input_data_1 = N'SELECT 1 as Col'
+ WITH RESULT SETS ((col varchar(50) not null))        
+```
+
+
+## Exercise
+1. Connect to the database and check you can run R code.
+1. Get a pivoted result set back of flights by month and carrier from the flights table.
+
+# A model storage area
+If you want to use models from SQL Server, or use it as a repository for models, you need to store models in varbinary column in a table. As you can only use ML Server on SQL Server 2016+, I recommend taking advantage of the temporal tables feature. Temporal tables have built in change tracking and a whole bunch of nifty SQL keywords that mean you can retrieve models that were active at a given point in time. This makes it easy to compare what results would have been over time and is useful if you work in a regulated environment.
+```{sql Basic_R_SQLServer-6, connection=dbConn, eval=do_eval, echo=FALSE}
+ALTER TABLE dbo.companyModels SET ( SYSTEM_VERSIONING = OFF)
+DROP TABLE IF EXISTS dbo.companyModelsHistory;
+DROP TABLE IF EXISTS dbo.companyModels
+```
+
+```{sql Basic_R_SQLServer-7, connection=dbConn, eval=do_eval, error=TRUE}
+CREATE TABLE [companyModels]    (  
+  [id] int NOT NULL PRIMARY KEY IDENTITY (1,1)   
+, [name] varchar(200) NOT NULL      
+, [modelObj] varbinary(max)    
+, [ValidFrom] datetime2 (2) GENERATED ALWAYS AS ROW START  
+, [ValidTo] datetime2 (2) GENERATED ALWAYS AS ROW END  
+, PERIOD FOR SYSTEM_TIME (ValidFrom, ValidTo)  
+, CONSTRAINT unique_modelname UNIQUE ([name]))
+WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo.companyModelsHistory));  
+```
+
+# Storing models and data in SQL Server from R
+
+
+## Model UPSERT stored procedure
+In keeping with automated versioning, you don't need some sort of version tag but you do need to avoid duplicates. It's really difficult (right now) for UPSERT behaviours to happen easily from R so I recommend writing an UPSERT stored procedure that can be called from R to write consistently to the model storage area.
+```{sql Basic_R_SQLServer-8, connection=dbConn, eval=do_eval, echo=FALSE, result="hide"}
+DROP PROCEDURE IF EXISTS modelUpsert
+```
+
+```{sql Basic_R_SQLServer-9, connection=dbConn, eval=do_eval}
+CREATE PROCEDURE modelUpsert
+@modelname  varchar(200) , 
+@modelobj varbinary(max) 
+AS
+WITH MySource as (
+    select @modelname as [name], @modelobj as [modelObj]
+)
+MERGE companymodels AS MyTarget
+USING MySource
+     ON MySource.[name] = MyTarget.[name]
+WHEN MATCHED THEN UPDATE SET 
+    modelObj = MySource.[modelObj]
+WHEN NOT MATCHED THEN INSERT
+    (
+        [name], 
+        modelObj
+    )
+    VALUES (
+        MySource.[name], 
+        MySource.modelObj
+    );
+```
+
+This can then be executed from R
+
+```{r Basic_R_SQLServer-10,  eval=do_eval}
+irisLM<- lm(Sepal.Length ~ ., data=iris)
+RODBCext::sqlExecute(dbconn, 
+          "exec modelUpsert @modelname=? , @modelobj=?",
+          data = data.frame("modelFromR", 
+                paste0( serialize(irisLM,NULL),collapse = "")))
+```
+
+## Writing data
+The easiest way for R users to write data to SQL Server is the `dbWriteTable()` function but it is worth noting that this is fairly limited in terms of schema support, auto-incrementing keys and so forth. This will improve in future.
+
+```{r Basic_R_SQLServer-11, echo=FALSE}
+if(!("flights" %in% dbListTables(dbConn))){
+dbWriteTable(dbConn, "flights", nycflights13::flights, overwrite=TRUE)
+}
+```
+
+```{r Basic_R_SQLServer-12, eval=TRUE}
+dbWriteTable(dbConn, "iris", iris, overwrite=TRUE)
+```
+
+## Exercise
+Create a model predicting a value from flights and write the result to the database with your initials included in the model name.
+
+# Storing models from SQL
+Using R locally to build models isn't always a good fit. Sometimes you'll want to take advantage of your server's compute, you won't be able to take the data off the server, or you'll want something can be run on a regular basis from SSIS to build the latest version of the model. 
+
+This is a stored procedure that will train a model using an opensource package and write the results to the model storage table. It makes use of our ability
+
+```{sql Basic_R_SQLServer-13, connection=dbConn, eval=do_eval, echo=FALSE, result="hide"}
+DROP PROCEDURE IF EXISTS generate_irisLM
+```
+
+```{sql Basic_R_SQLServer-14, connection=dbConn, error=TRUE, eval=do_eval}
+CREATE PROCEDURE generate_irisLM
+AS
+BEGIN
+DECLARE @model varbinary(max);
+EXECUTE sp_execute_external_script
+        @language = N'R'
+        ,@script = N'
+        model<-serialize(lm(Sepal.Width ~ ., data=InputDataSet, model=FALSE),NULL)
+        '
+        ,@input_data_1 = N'SELECT * FROM iris'
+        , @params = N'@model varbinary(max) OUTPUT'
+        , @model = @model OUTPUT
+		 ;
+  EXEC modelUpsert 'modelFromR', @model ;
+
+END
+```
+
+
+```{sql Basic_R_SQLServer-15, connection=dbConn, error=TRUE, eval=do_eval}
+EXEC generate_irisLM
+```
+
+Especially when training server-side, we can make use of the ML functions from the special ML packages. These require a different serialization function and within that, to make the model object smaller we can specify `realtimeScoringOnly` to drop unnecessary columns from the object.
+
+```{sql Basic_R_SQLServer-16, connection=dbConn, eval=do_eval, echo=FALSE, result="hide"}
+DROP PROCEDURE IF EXISTS generate_irisLM2
+```
+
+```{sql Basic_R_SQLServer-17, connection=dbConn, error=TRUE, eval=do_eval}
+CREATE PROCEDURE generate_irisLM2
+AS
+BEGIN
+DECLARE @model varbinary(max);
+EXECUTE sp_execute_external_script
+  @language = N'R'
+  , @script = N'
+        irisLM<-rxLinMod(Sepal.Length ~ Sepal.Width + Petal.Length + Petal.Width + Species, data=InputDataSet)
+    model <- rxSerializeModel(irisLM, realtimeScoringOnly = TRUE)
+    '
+  ,@input_data_1 = N'SELECT * FROM iris'
+  , @params = N'@model varbinary(max) OUTPUT'
+  , @model = @model OUTPUT
+  
+  EXEC modelUpsert 'modelFromRevo', @model ;
+
+END
+```
+
+```{sql Basic_R_SQLServer-18, connection=dbConn, error=TRUE, eval=do_eval}
+EXEC generate_irisLM2
+```
+
+## Exercise
+1. Create a model predicting departure delay from the flights data, using normal R functionality, and write it to the DB with a unique name.
+1. Make version of your flights model using an rx function and write it to the DB with a unique name.
+
+# Using models in SQL
+
+## Sending models to R
+If you need to make a prediction for a model that uses opensource R packages, you will need to pass data and the prediction object back to R to get a result. Inside your R script, you will need to unserialize the model to be able to use it.
+
+```{sql Basic_R_SQLServer-19, connection=dbConn, eval=do_eval}
+DECLARE @mymodel varbinary(max)=(SELECT modelobj 
+                FROM companymodels 
+                WHERE [name]='modelFromR'
+                );
+EXEC sp_execute_external_script
+@language = N'R',  
+@script = N'
+OutputDataSet<-data.frame( predict(unserialize(as.raw(model)), InputDataSet),
+InputDataSet$Sepal.Length
+    )
+',
+@input_data_1 = N'SELECT TOP 5 * from iris',  
+@params = N'@model varbinary(max)',  
+@model =  @mymodel 
+WITH RESULT SETS ((
+    [Sepal.Length.Pred]  FLOAT (53)    NULL,
+    [Sepal.Length]  FLOAT (53)    NULL))
+```
+
+
+## Using models directly in SQL
+If you used an rx* model, you can use the new PREDICT SQL keyword to apply a model to some data.
+
+```{sql Basic_R_SQLServer-20, connection=dbConn, error=TRUE, eval=do_eval}
+DECLARE @model varbinary(max) = (
+  SELECT modelobj
+  FROM companyModels
+  WHERE [name] = 'modelFromRevo');
+SELECT TOP 10 d.*, p.*
+  FROM PREDICT(MODEL = @model, DATA = iris as d)
+  WITH("Sepal.Length_Pred" float) as p;
+```
+
+In 2017 & upgraded 2016 instances, you can also use the `sp_rxPredict` stored procedure. This needs [CLR enabled and some other stuff done](https://docs.microsoft.com/en-us/sql/advanced-analytics/r/how-to-do-realtime-scoring#bkmk_enableRtScoring). 
+
+```{sql Basic_R_SQLServer-21, connection=dbConn, error=TRUE, eval=do_eval}
+DECLARE @model varbinary(max) = (
+  SELECT modelobj
+  FROM companyModels
+  WHERE [name] = 'modelFromRevo');
+
+EXEC sp_rxPredict @model = @model,
+@inputData = N'SELECT TOP 10 * FROM iris'
+```
+
+## Exercise
+1. Write SQL to make predictions for ten random rows of your flights table for both models that you stored in the previous section.
+
+
+
+# Making models into webservices
+If you want a webservice that you can actually publish to a web-facing (subject to firewalls!) API area of the ML Server using the [mrsdeploy](https://docs.microsoft.com/en-us/machine-learning-server/operationalize/how-to-deploy-web-service-publish-manage-in-r) package.
+
+```r
+publishService(
+  "basicFlightsLM",
+  code = NULL,
+  # --- `model` is required for web service with serviceType `Realtime` --- #
+  model = "model = flightsLM",
+  # --- `serviceType` is required for this web service --- #
+  serviceType = "Realtime"
+)
+```

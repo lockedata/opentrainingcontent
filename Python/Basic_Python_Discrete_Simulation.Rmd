@@ -1,0 +1,207 @@
+```{r Basic_Python_Discrete_Simulation-1, include=FALSE}
+library(reticulate)
+use_python("//anaconda/bin/python")
+use_condaenv("py36")
+
+```
+
+# Discrete-event Simulations
+
+## Introduction to simulations
+
+Computer simulations are used in many disciplines including physics,
+climatology, chemistry, biology, economics, financial markets,
+psychology, social science, and engineering. Here are some of the
+benefits of using computer simulations to model systems:
+
+-   Computer simulations are often much cheaper and faster than real
+    world testing.  
+-   Sometimes the real world process you are trying to model takes too
+    long to measure in real time.
+-   You can make predictions into the future.
+-   Computer simulations are a safe way of modelling dangerous systems
+    and events.
+
+## Introducing discrete-event simulations and Simpy
+
+Discrete-event simulations cut time up into distinct time intervals and
+do not allow events to fall between these times. For example you could
+create a simulation where events occur each hour and cannot fall halfway
+through an hour. An alternative to discrete-event simulations are
+'continuous simulations'. Simpy is a popular Python library for
+process-based discrete-event simulations.
+
+## Example 1
+
+The following is a simple simulation of a deer walking through a forest.
+The simulation is defined by a deer that needs to rest for one hour
+after every 3 hours of walking.
+
+```{python Basic_Python_Discrete_Simulation-2, comment=NA, results = 'hold'}
+
+import simpy  
+def deer(forest):
+    while True:
+        print('Start walking at hour %d' % forest.now)
+        walkDuration = 3
+        yield forest.timeout(walkDuration)
+        print('Start resting at hour %d' % forest.now)
+        restDuration = 1
+        yield forest.timeout(restDuration)
+forest = simpy.Environment()
+forest.process(deer(forest))
+forest.run(until=10)
+
+```
+
+A general feature of simulations like these is that components (deer)
+are modelled with processes (walking, resting). These processes reside
+within an environment (forest) and interact with each other via events
+(elapsed time).
+
+## How to plan a simple simulation
+
+1.  Start by defining how many 'components' there will be in your
+    simulation and the different 'processes' they can be undertaking. In
+    Example 1 above there is one type of component (a deer) which is
+    undertaking one of two processes (walking or resting).
+2.  Next you need to define the processes and the criteria that dictate
+    when the components change process. In Example 1 the deer changes
+    from one process to another depending on elapsed time.  
+3.  In simple simulations you have just one environment (a forest in
+    this case), but in more complex simulations you can have multiple
+    environments that can all interact with each other.
+
+## How to construct a simulation using Simpy
+
+1.  First of all import simpy into your active Python module:
+
+```{python Basic_Python_Discrete_Simulation-3, comment=NA, results = 'hold'}
+import simpy 
+```
+
+2.  Next define your simulation components (a deer in this case):
+
+```{python Basic_Python_Discrete_Simulation-4, comment=NA, results = 'hold'}
+def deer(forest):
+    while True:
+        print('Start walking at hour %d' % forest.now)
+        walkDuration = 3
+        yield forest.timeout(walkDuration)
+        print('Start resting at hour %d' % forest.now)
+        restDuration = 1
+        yield forest.timeout(restDuration)
+```
+
+-   You start by defining the deer as a component that exists in the
+    environment called 'forest'.
+-   The `yield` statement suspends the current process until an event
+    occurs (in this case a certain period of time passes).
+-   `timeout()` creates an event, at which point the process resumes.
+-   `print()` statements can be used to output data and check that your 
+    simulation is running as planned.
+
+3.  Create your environment, to processes and run the simulation:
+
+
+```{python Basic_Python_Discrete_Simulation-5, comment=NA, results = 'hold'}
+forest = simpy.Environment() 
+forest.process(deer(forest)) #creates a component called deer that undergoes process in an environment
+forest.run(until=10) #runs the simulation for 10 seconds 
+```
+
+-   `Environment()` create an environment called forest.
+-   `process()` create a component called deer that undergoes process in an
+    environment.
+-   `run()` run the simulation for 10 seconds using the `until` parameter.
+
+### Exercise 1
+
+Create a simulation that models a bus that alternates between a 5 hour
+journey and a 2 hour break at the bus depot.
+
+## Using probability distributions in simulations
+
+To make our simulation more realistic we can use probability
+distributions to generate our input data. For example we can improve our
+forest example from earlier by using a Poisson distribution to model the
+number of hours that the deer is walking while it looks for food and
+water.
+
+The NumPy function `np.random.poisson()` generates data that fits a
+Poisson distribution.
+
+```{python Basic_Python_Discrete_Simulation-6, comment=NA, results = 'hold'}
+import numpy as np
+walkDuration = np.random.poisson(1, 1000) + 1 
+```
+
+I have added 1 to this randomly generated data so that the deer always
+walks a minimum of 1 hour.
+
+Below I have amended the forest simulation example from before to take
+account of the Poisson distribution of time spent walking. I also create
+two new variables called `forestTime` and `state` to record the time at
+which the deer is walking or resting. After running the simulation I
+plot this data.
+
+```{python Basic_Python_Discrete_Simulation-7, comment=NA, results = 'hold'}
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import simpy
+import numpy as np
+walkDuration = np.random.poisson(1, 1000) + 1 
+forestTime = []
+state = []
+def deer(forest, forestTime, state): 
+    i=0
+    while True:
+        forestTime.append(forest.now)
+        state.append(0)
+        yield forest.timeout(walkDuration[i])
+            
+        forestTime.append(forest.now)
+        state.append(1)
+        restDuration = 1
+        yield forest.timeout(restDuration)
+        i=i+1
+            
+forest = simpy.Environment()
+forest.process(deer(forest, forestTime, state))
+forest.run(until=30)
+fig,ax = plt.subplots(1)
+plt.fill_between(forestTime, state, step = 'pre') # care needs to be taken to ensure that the correct step is chose to ensure data isn't inverted 
+plt.xlabel('Simulation Time [hours]')
+ax.set_yticklabels([])
+blue_patch = mpatches.Patch(color='blue', label='Walking')
+plt.legend(handles=[blue_patch])
+plt.show() 
+
+```
+
+### Exercise 2
+
+Amend your simulation from exercise 1 to use data generated from a
+probability distribution as the inputs for the bus journey time and
+break times.
+
+### Solution to Exercise 2
+
+One potential solution to exercise 2 could be, using the minimum driving of five hours and the minimum rest at the depot of two hours:
+
+```{python Basic_Python_Discrete_Simulation-8, comment=NA, results = 'hold'}
+import simpy  
+import numpy as np
+def bus(journey):
+    while True:
+        print('Start walking at hour %d' % journey.now)
+        driveDuration = np.random.poisson() + 5 # add 5 to have the minimum duration of driving 5 hours
+        yield journey.timeout(driveDuration)
+        print('Start resting at hour %d' % journey.now)
+        parkDuration = np.random.poisson() + 2 # add 2 to have the minimum rest at the depot of 2 hours
+        yield journey.timeout(parkDuration)
+journey = simpy.Environment()
+journey.process(bus(journey))
+journey.run(until=20)
+
+```

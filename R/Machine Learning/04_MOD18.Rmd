@@ -1,0 +1,100 @@
+
+
+# Feature engineering
+When we get our first cut of data, it might not have enough relevant explanatory variables in it. 
+
+We can supplement our data with data from additional sources, we can produce aggregate measures, and add lagged or historic measures. 
+
+These new variables can then be considered when we run a model.
+
+## Cleaned variables
+When we do our data preparation, by scaling and cleaning variables we are engineering *new* features derived from existing features and using those instead of the originals. The following are brief recaps of the material covered in the data preparation section.
+
+### Scaling variables
+Scale variables with z-scores by using `caret::preProcess()` to enable the reapplication of scales to future data.
+
+```{r 04_MOD18-1}
+library(caret)
+library(tidyverse)
+
+iris %>% 
+  preProcess -> 
+  scaleObject
+```
+
+### Handling categoricals
+- Use forcats to process factors to tidy them up, reduce the number of levels, make NAs explicit etc.
+- Consider reducing variation in columns for high variance columns. For instance, reduce postcode down to district unless you have substantial amounts of data
+- Build functions to enable the consistent application of treatments
+
+### Handling missings
+Common methods for coping with missing data:
+
+- Removing rows with missings
+    - Con: reduces sample size
+    - Pro: use only complete data
+- [Continuous variables only] Putting in a default value like mean
+    - Con: tends to flatten model coefficient for variable
+    - Pro: simple to do
+- Putting in a predicted value
+    - Con: requires another set of data
+    - Pro: realistic values
+- [Continuous variables only] Making variable a categorical with an explicit missing category
+    - Con: information loss on continuous variables
+    - Pro: explicit modelling of missings
+    
+## Additional data
+One of the best things we can do to add features is to add adjacent data. For instance, if we were analysing sales then we could bring in features about the sales person, the customer, the logistics and more to help identify areas impacting sales.
+
+## Lags
+Lagged values are past values brought forward for use as predictive variables. These might be things like the previous payment amount, time spent playing previously etc.
+
+`lag()` (and `lead()` although it tends to be less relevant whilst building models) returns a previous row's value onto the current row.
+
+```{r 04_MOD18-2}
+lag(1:5)
+```
+
+Use lags to provide prior values, like position 6 months ago:
+```{r 04_MOD18-3}
+lag(1:50, n = 6, default = 0)
+```
+
+Use lags to flag if values changed
+```{r 04_MOD18-4}
+x=rep(c(2,1,1,2),2)
+x==lag(x)
+```
+
+Use lags to determine change
+```{r 04_MOD18-5}
+x=1:50
+(x/lag(x))-1
+```
+    
+
+## Aggregates
+Producing aggregate measures like lifetime value, typical profitability, max months in arrears in the past year, times seen etc are useful measures.
+
+It is worth noting though that if you make aggregates of historic data and use these in a model, going forward you will need those levels of historic data to make predictions.
+
+Find the rolling mean /  max / min / etc... over previous values:
+```{r 04_MOD18-6}
+library(RcppRoll)
+iris %>% 
+  group_by(Species) %>% 
+  mutate(rollMean=roll_meanr(lag(Sepal.Width),
+                             n = 5))
+```
+
+Find the min / max / sum / etc... in all prior observations:
+```{r 04_MOD18-7}
+iris %>% 
+  group_by(Species) %>% 
+  mutate(smallest=cummin(Sepal.Width))
+```
+
+
+## Data presence
+Instead of encoding data sometimes, the presence or absence of information can be useful features. For instance, how complete is a person's profile, have we had previous interactions with someone, do they fill in surveys?
+

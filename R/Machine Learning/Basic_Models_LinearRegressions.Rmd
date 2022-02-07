@@ -1,0 +1,103 @@
+# (PART) Core models {-}
+# Linear regression
+```{r Basic_Models_LinearRegressions-1, include=FALSE}
+library(tidyverse)
+library(modelr)
+library(ggplot2)
+library(broom)
+library(FFTrees)
+```
+
+
+## Linear regression
+Purpose: perform a line of best fit analysis to predict a continuous variable
+
+- Works best on normally distributed outcomes and input data
+- Fast computation
+- Readily interpretable
+- Needs work to handle non-linear relationships
+
+A *linear regression* predicts a continuous variable based on multiple independent variables. 
+
+
+If we were trying to predict a continuous variable:
+
+```{r rnorm2, fig.cap="Continuous outcome variable"}
+library(ggplot2)
+set.seed(777)
+y_n<-rnorm(1000,100,25)
+qplot(y_n, binwidth=5)+theme_minimal()
+```
+
+A basic regression using a single variable could look like:
+```{r xyc1, fig.cap="Simple line of best fit"}
+x_n<-y_n+rnorm(1000,30,20)
+qplot(x_n,y_n) + geom_smooth(method = "lm", se = FALSE)+theme_minimal()
+```
+
+## Function
+The `lm()` or linear model function is used to calculate a linear regression model. The default display shows the model coefficients.
+
+```{r Basic_Models_LinearRegressions-2}
+lm(Sepal.Length~Petal.Width, data = iris)
+```
+
+The data argument comes second so when we want to use the tidyverse, we need to use our dot notation.
+```{r Basic_Models_LinearRegressions-3}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .)
+```
+
+## Summarising the model
+To get a more in-depth view of our model we can use `summary()`.
+```{r Basic_Models_LinearRegressions-4}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  summary()
+```
+
+## Extracting coefficients
+To get the coefficients for use in other systems, plus permformance measures use broom's `tidy()`.
+```{r Basic_Models_LinearRegressions-5}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  broom::tidy()
+```
+
+## Extracting fitted values
+We can get the original data plus the fitted values and error measurements out using broom's `augment()`.
+
+```{r Basic_Models_LinearRegressions-6}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  broom::augment() %>% 
+  ggplot(aes(x=Sepal.Length, y=.fitted), data=.) +
+  geom_point() +
+  geom_abline(slope=1, intercept=0)
+```
+
+## Predictions
+
+Make predictions and add theese to our original data with modelr's `add_predictions()` function.
+
+```{r Basic_Models_LinearRegressions-7}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) ->
+  irismodel
+
+iris %>% 
+  sample_frac(.3) %>% 
+  modelr::add_predictions(irismodel)
+```
+
+## Model summary statistics
+To get overall quality measures about a model use broom's `glance()`.
+```{r Basic_Models_LinearRegressions-8}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  broom::glance()
+```
+
+## Exercises
+1. Using the dataset airquality, build some models predicting the month based on weather attributes
+2. Using AIC as your selection criteria, which of your models performed best?

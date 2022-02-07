@@ -1,0 +1,16 @@
+# H2O.ai
+
+## Purpose
+H2O.ai is a JVM based ML platform, with GPU models.
+
+![](img/H2O-Architecture-Slide.png)
+
+## Requirements
+- `h2o` package
+- H2O instance
+
+## Basics
+
+## Exercise
+
+## Next steps

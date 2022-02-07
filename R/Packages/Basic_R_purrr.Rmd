@@ -1,0 +1,109 @@
+# purrr
+
+## Purpose
+`purrr` helps you perform "functional programming". It advances us from simple piping of objects to allowing us to work with a range of objects more effectively, especially lists.
+
+## Requirements
+- `purrr` required
+- `tidyverse` recommended
+
+```{r Basic_R_purrr-1}
+library(tidyverse)
+library(purrr)
+```
+
+## Basics
+
+Extract list elements with `pluck()` to get elements at level 1.
+
+```{r Basic_R_purrr-2}
+my_list<-list(a=LETTERS, b=iris, 
+              c=list(d=letters, e=1))
+
+my_list %>% 
+  pluck("a")
+
+my_list %>% 
+  pluck("c")
+```
+
+Use `map()` to extract elements within list sub-elements for every element
+```{r Basic_R_purrr-3}
+my_list %>% 
+  map("d")
+```
+
+```{r Basic_R_purrr-4}
+my_list %>% 
+  map("d", .default=NA)
+```
+
+Simplify a list with `flatten()` and `flatten_*()` which assert the destination data type.
+
+```{r Basic_R_purrr-5}
+my_list %>% 
+  map("d") %>% 
+  purrr::flatten_chr()
+```
+
+You can use `map()` with functions.
+
+```{r Basic_R_purrr-6}
+my_list %>% 
+  map(length)
+```
+
+Create ad-hoc functions inside `map()` too.
+
+```{r Basic_R_purrr-7}
+my_list %>% 
+  map(~length(.)/2)
+```
+
+Perform sequential map actions to perform actions to multiple list elements and then consolidate data.
+
+```{r Basic_R_purrr-8}
+iris %>% 
+  modelr::bootstrap(25) %>% 
+  pluck("strap") %>% 
+  map(~lm(Sepal.Width ~ ., data=.)) %>% 
+  map_df(broom::tidy, .id="id") ->
+  modelparams
+```
+
+## Exercise
+Run the following query:
+```{r Basic_R_purrr-9}
+"https://haveibeenpwned.com/api/v2/breachedaccount/test@example.com" %>% 
+  httr::GET() %>% 
+  httr::content() ->
+  breaches
+```
+
+Extract the name of every breach this account has been in.
+
+```{r Basic_R_purrr-10, echo=FALSE, results="hide"}
+breaches %>% 
+  map_chr("Name")
+```
+
+## purrr for ETL
+
+### Book 2 extract: Advanced reading of data
+Sometimes, we don't just want to read data from one file, tab, or table but multiple files, tabs, or tables. In such circumstances, we might not even know the names of all the files we want to work with or there may be too many names to work with. Reading and combining that data could be tough were it not for `purrr`.
+
+`purrr` contains functions that allow us to work with lists. In practice we can handle anything as a list including a vector of filenames, for instance. The `map()` function and type-specific variants come in very handy as they allow us to run another function against each element in our list. 
+
+This means that we can use `map()` to apply one of the functions for reading in data against every file so that all files get read into memory. If all the results are tabular then we can even the use the data.frame specific version of `map()`, `map_df()`, to immediately collapse everything into one big dataset.
+
+`map()` and `map_df()` take two key inputs. The first is the list (or vector) that we want to process. The second is the name of the function we want to run against each item in the list. The function name doesn't need brackets after it as `purrr` will grab the code for the function and execute it for us. We only need brackets when we're going to execute the function ourselves.
+
+Super handily for us, the `map_df()` function will also cope with different column names and data types when it combines them. Data gets matched by column name^[So provide column names if you have a default set you always want adhered to] and where there's not a match a new column will be made. If the column datatypes change over files then the column will end up as safest column type for all the data encountered. This makes this technique excellent for combining data that could vary.^[If you've used ETL tools like SQL Server Integration Services you'll know that such tools usually have a fixed metadata concept so new or missing columns can really break things. R is much better for dynamic ETL challenges I've found.]
+
+```{r Basic_R_purrr-11, eval=FALSE}
+list.files(pattern="*.csv") %>% 
+  map_df(read_csv) 
+```
+
+## Next steps
+1. Check out Jenny Bryan's [purrr tutorial](https://jennybc.github.io/purrr-tutorial/)

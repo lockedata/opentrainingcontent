@@ -1,0 +1,17 @@
+# rize
+
+`rize` is a package that will enable you to quickly bundle a shiny solution into a docker image. It uses shiny server as the basis of hosting inside it and comes with a default config file but you can provide your own tailored file.
+
+When you have an app you want to ship you run `rize::shiny_dockerize()`. It will generate a Dockerfile for running the application and then build a container image, including the necessary packages to run the app. 
+
+> This will require the `docker` command to be available on your command-line. 
+
+The default Dockerfile is based on the Docker image [colebrokamp/r-shiny](https://hub.docker.com/r/colebrokamp/r-shiny) but we can easily swap in a template that leverages the rocker shiny containers or our own defaults by providing a path to a Dockerfile template.
+
+```{r rize-1, eval=FALSE}
+remotes::install_github("lockedata/rize")
+rize::shiny_dockerize(".", base=system.file("rize", "rocker-Dockerfile", package = "rize"))
+```
+
+## Exercise
+Using either a pre-existing shiny app or a default one via New File build a containerised version of your application.

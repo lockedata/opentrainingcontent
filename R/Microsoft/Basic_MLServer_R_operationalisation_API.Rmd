@@ -1,0 +1,22 @@
+# Analysing big data with Microsoft ML Server
+# 8. Deploying models to SQL Server and APIs
+
+## Decision trees
+Purpose: predict a discrete outcome
+
+
+```{r Basic_MLServer_R_operationalisation_API-1, echo=FALSE}
+a1 <- 'a'
+```
+
+## Function 
+Therer are number of decision tree R packages, here I use FFTrees for the superior visualisations.
+
+```{r Basic_MLServer_R_operationalisation_API-2}
+a <- c(1,2,3)
+```
+
+
+## Exercises
+1. Build a decision tree for predicting the `y` column in the `bank` dataset
+2. What are the most important factors in this tree?

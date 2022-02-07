@@ -1,0 +1,174 @@
+# caret, modelr, and broom
+
+## Purpose
+These three packages aim to make life easier when doing data science.
+
+- `caret` is the broadest scope
+- `modelr` is for sampling and predictions
+- `broom` is for getting data.frame outputs from models
+
+## Requirements
+- `tidyverse` recommended (`modelr` and `broom` both included)
+- `caret` required
+
+```{r Basic_R_caret-1}
+library(broom)
+library(modelr)
+library(caret)
+```
+
+## broom
+
+Get model statistics in a data.frame using `glance()`.
+```{r Basic_R_caret-2}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  broom::glance()
+```
+
+Get coefficients and their statistics using `tidy()`.
+```{r Basic_R_caret-3}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  broom::tidy()
+```
+
+Get the fitted data and associated statistics with `augment()`.
+
+```{r Basic_R_caret-4}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  broom::augment() %>% 
+  head()
+```
+
+### Exercise
+1. Produce a model for predicting the `mpg` field from `mtcars`
+2. Use `broom` to get key information about the model and plot actuals vs. fitted results.
+
+## modelr
+Use `modelr` to perform efficient sampling and the addition of predictions to datasets.
+
+Use `resample_partition()` to create slices of data for various purposes.
+
+```{r Basic_R_caret-5}
+nycflights13::flights  %>% 
+  resample_partition(c("train"=.7,"test"=.3)) ->
+  resampled_flights
+
+resampled_flights
+```
+
+The result is a list, so you can extract samples using `purrr::pluck()`.
+
+```{r Basic_R_caret-6}
+resampled_flights %>% 
+  pluck("train") %>% 
+  lm(arr_delay~carrier, .) ->
+  simple_model
+```
+
+Use `add_predictions()` to get a data argument first prediction function that adds predictions to the data.frame.
+
+```{r Basic_R_caret-7}
+resampled_flights %>% 
+  pluck("test") %>% 
+  add_predictions(simple_model)  %>% 
+  pluck("data") %>% 
+  head()
+```
+
+Use `resample_bootstrap()` to produce many samples. Extract the samples from the `strap` element. You can then use `purrr` functions to apply a model to each sample. `broom` then comes in handy as you can extract coefficients into a tabular result set.
+
+```{r Basic_R_caret-8}
+iris %>% 
+  modelr::bootstrap(25) %>% 
+  pluck("strap") %>% 
+  map(~lm(Sepal.Width ~ ., data=.)) %>% 
+  map_df(broom::tidy, .id="id") ->
+  modelparams
+```
+
+You could then plot or otherwise perform actions with the results of the bootstrap process.
+
+```{r Basic_R_caret-9}
+library(ggplot2)
+modelparams %>% 
+  ggplot(aes(x=estimate))+
+  geom_density()+
+  facet_wrap(~term,scales = "free")
+```
+
+### Exercise
+1. Sample the flights data and build a linear model predicting departure delay.
+2. Bootstrap the flights data and build a linear model predicting departure delay.
+3. Plot the distribution of the bootstrapped results and add vertical lines for the coefficient estimates of your single sample.
+4. Make predictions based on your single sample model and plot the actuals vs. predictions.
+
+## caret
+caret is very useful along the whole model build pipeline. It's only downside is it's not very tidyverse friendly (currently!) and at tiem of typing this, broom won't work with models produced via `train()`.
+
+You can build samples where the class ratio is maintained using `createDataPartition()`
+
+```{r Basic_R_caret-10}
+data("GermanCredit")
+GermanCredit$Class %>% 
+  createDataPartition(p = .7,list = FALSE) ->
+  training_rows
+
+credit_training<- GermanCredit[training_rows,]
+credit_testing<- GermanCredit[-training_rows,]
+```
+
+You can perform numeric scaling and cleaning using the `preProcess()` step to get a reusable object that you use to correctly scale test data and incoming data in production.
+
+```{r Basic_R_caret-11}
+credit_training %>% 
+  dplyr::select(-Class) %>% 
+  preProcess(method=c("center", "scale",  "zv", "nzv", "pca", "knnImpute")) ->
+               credit_prep
+
+credit_prep
+```
+
+```{r Basic_R_caret-12}
+credit_training %>% 
+  predict(credit_prep, .) -> 
+  credit_training
+
+credit_testing %>% 
+  predict(credit_prep, .) -> 
+  credit_testing
+```
+
+The `train()` function can then be used to produce a wide range of models. It expects your outcome variable to be in a seperate object.
+
+```{r Basic_R_caret-13}
+credit_training %>% 
+  dplyr::select(-Class) %>% 
+  train(y=credit_training$Class,method="glm") ->
+  credit_glm
+
+credit_training %>% 
+  dplyr::select(-Class) %>% 
+  train(y=credit_training$Class,method="glmnet") ->
+  credit_glmnet
+```
+
+`caret` then provides some tools for evaluating models.
+```{r Basic_R_caret-14}
+varImp(credit_glm)
+```
+
+```{r Basic_R_caret-15}
+confusionMatrix(predict(credit_glmnet,credit_testing),
+                credit_testing$Class)
+```
+
+### Exercise
+1. Sample the flights data using caret.
+2. Clean up variables using caret.
+3. Build a linear model predicting departure delay using caret.
+
+## Next steps
+1. Read the [in-depth caret book](http://topepo.github.io/caret/)

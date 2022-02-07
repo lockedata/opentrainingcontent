@@ -1,0 +1,462 @@
+# (PART) Basic data manipulation {-} 
+#  Grid references
+With R objects, it's possible to use a grid reference system to select values from an object. 
+
+In vectors and lists, you can specify the element position as they only have a single dimension. In data.frames, you can pinpoint the element via the row and the column.
+
+You can provide a grid reference by adding square brackets after a name e.g. `mylist[ ]`. Inside the square brackets, we can provide values in a few different ways to say which part of the object's "grid" is required.
+
+If you want everything in an object, you can just use the object's name or put empty square brackets after it i.e. `LETTERS` and `LETTERS[]` are identical.
+
+```{r 03a_datamanip-1, linewidth=60}
+LETTERS[]
+```
+
+## Grid references with numbers
+To select a specific element, you provide the number indicating it's position in the object.^[The first element in an R object is at position 1. This is contrary to a number of programming languages where the first element is at position 0.] 
+
+This is similar to Excel. When you only have a single column of values in a spreadsheet, you can identify a value to someone by telling them what row number it's on. When you have a table, you need to tell someone both the row and the column for someone to find the exact value.
+
+### Single value selection with vectors
+To select a single element from a vector, we need to put the element's position inside square brackets after the vector.
+
+To select the second element in the vector `LETTERS` we put it's position (2) into the grid.
+
+```{r 03a_datamanip-2}
+LETTERS[2]
+```
+
+We're not bound to selecting values from objects that are stored either! For instance, we can generate a sequence of numbers and subset from it directly.
+```{r 03a_datamanip-3}
+(10:25)[13]
+```
+
+### Single value selection with data.frames
+
+
+In a data.frame, you can provide one or two values. These are comma separated inside the square brackets and row numbers get specified first e.g. `iris[ row , column ]`. If you want to select all rows or all columns you leave that part of the reference blank e.g. `iris[1, ]` to return the first row and `iris[ ,2]` to return the second column. 
+
+```{r 03a_datamanip-4}
+mydf<-data.frame(a=1:5, b=6:10, c=11:15)
+```
+
+```{r 03a_datamanip-5, echo=FALSE}
+kable(mydf)
+```
+
+```{block 03a_datamanip-6, type="warning"}
+Whenever I'm going to output a data.frame, I'm going to output in a formatted way as opposed to how it'll appear in the console. This is to make it easier to see the changes as the console view can get a little much! You can use the `View()` function to see the data.frame in a nice browser in RStudio.
+```
+
+If we provide a row number by using `df[ X , ]`, we will get a data.frame object back with just one row.
+```{r 03a_datamanip-7, eval=FALSE}
+mydf[1, ]
+```
+
+```{r 03a_datamanip-8, echo=FALSE}
+kable(mydf[1, ])
+```
+
+If we provide a column number by using `df[ , Y ]`, we will get a vector back.^[This is not quite accurate but it's a good starting point. In fact, a data.frame is actually a list with pretty print methods so you could theoretically have a column that is a list.] 
+
+```{r 03a_datamanip-9}
+mydf[ ,1]
+```
+
+If we specify a row and a column by using `df[ X , Y ]`, we get a vector back containing a single element although in we'd normally refer to it as a single value for brevity.
+
+```{r 03a_datamanip-10}
+mydf[3,3]
+```
+
+### Single value selection with lists
+When we use the grid reference system to select stuff from lists, R returns a list with just the element you selected in it.
+
+Our example list contains two vectors. Both vectors are stored as elements but the sequence one to three was additionally given a name.
+
+```{r 03a_datamanip-11, linewidth=60}
+mylist<-list(a=1:3, LETTERS)
+mylist
+```
+
+We can select elements based on their position, irrespective of whether they have names.
+
+```{r 03a_datamanip-12,  linewidth=60}
+mylist[2]
+```
+
+If an element was named, then that name will be kept and displayed.
+```{r 03a_datamanip-13}
+mylist[1]
+```
+
+
+### Multiple values
+Remember how a single value is still counted as a vector by R? This means that when we say `letters[1]` the 1 is actually a vector, and *that* means that we can provide longer vectors in our grid specifications too!
+
+For a vector, that means we can provide a single vector with the positions of the elements to return.
+
+```{r 03a_datamanip-14}
+LETTERS[1:5]
+```
+
+The ranges don't have to be continuous either.
+```{r 03a_datamanip-15}
+LETTERS[c(1:5, 23:26)]
+```
+
+In fact, you can repeat numbers to get the same value out multiple times.
+```{r 03a_datamanip-16}
+LETTERS[c(1,1,1)]
+```
+
+These things all hold true for data.frames too. This means we can provide ranges to both rows and columns to subset by the position of values in the table.
+
+```{r 03a_datamanip-17, eval=FALSE}
+mydf[1:3,1:2]
+```
+
+```{r 03a_datamanip-18, echo=FALSE}
+kable(mydf[1:3,c(1,2)])
+```
+
+### Negative values
+As well as positive specifications, we can also use negative values. These tell R which bits of the grid that you *don't* want.
+
+Here I exclude the first five letters.
+```{r 03a_datamanip-19, linewidth=60}
+LETTERS[-(1:5)]
+```
+
+When it comes to data.frames we can provide negative values in both rows and columns to produce a subset we're interested in.
+
+```{r 03a_datamanip-20, eval=FALSE}
+mydf[-3,-2]
+```
+
+```{r 03a_datamanip-21, echo=FALSE}
+kable(mydf[-3,-2])
+```
+
+### Missing values
+You might be wondering what happens if you refer to a row number or element position that is not between 1 and the length of your object. 
+
+In such a scenario, R will actually return an **NA** (a missing value) for that position.
+```{r 03a_datamanip-22}
+LETTERS[23:29]
+```
+
+```{r 03a_datamanip-23, eval=FALSE}
+mydf[5:6, ]
+```
+
+```{r 03a_datamanip-24, echo=FALSE}
+kable(mydf[5:6, ])
+```
+
+## Grid references with names
+Where names are used, we can provide these names in our grid references.
+
+```{r 03a_datamanip-25}
+mylist["a"]
+```
+
+This works for column (and row) names.
+
+```{r 03a_datamanip-26}
+mydf[, "a"]
+```
+
+We can provide longer vectors containing column names too. Recall when we used numbers, one value in the column returned a vector, but multiple values resulted in a data.frame? The same is true here.
+
+```{r 03a_datamanip-27, eval=FALSE}
+mydf[ , c("a","b")]
+```
+
+```{r 03a_datamanip-28, echo=FALSE}
+kable(mydf[ , c("a","b")])
+```
+
+
+
+## Grid references with conditional values
+Whilst we often want to subset data.frames to some specific columns, a lot of the time with vectors and data.frames we want to be able to apply a condition that determines which values are returned. We want to **filter** rows.
+
+Like with SQL, you can apply a filter by telling R which rows (or elements) it should and shouldn't return. You do this be providing a set of boolean values where TRUE means the row should be returned and FALSE says it should be excluded.
+
+We can provide hard-coded boolean values to the row and column parts of our grid reference system.
+
+For instance, if I wanted to exclude the second column in the data.frame I could say to include the first and third by giving them a TRUE in my filter and I could exclude the second column by giving it a FALSE in my filter.
+
+```{r 03a_datamanip-29, eval=FALSE}
+mydf[, c(TRUE,FALSE,TRUE)]
+```
+
+```{r 03a_datamanip-30, echo=FALSE}
+kable(mydf[, c(TRUE,FALSE,TRUE)])
+```
+
+```{block 03a_datamanip-31, type="glass"}
+You might be used to using 0 and 1 as shorthand for boolean values. Unfortunately, if you try to use this you find NAs returned for any values you intended to be excluded by using 0, and you'll get the first value repeated everywhere you used a 1 to indicate inclusion.
+```
+
+### Building conditional vectors
+Hard-coding TRUE and FALSE values is probably not your idea of fun and certainly isn't mine. We can use our knowledge of building comparisons to generate our booleans for inclusion.
+
+Let's say we wanted all the letters of the alphabet up to and including "e". We could use our comparison operators to compare every letter against "e" and return a TRUE where it is "e" or occurs before "e" in the alphabet, and it would return a FALSE when it occurs after "e". 
+
+This gives us an include and exclude instruction for each of the 26 letters. We can then use this boolean vector as our filter in the grid reference system.
+
+```{r 03a_datamanip-32}
+earlyletters <- LETTERS <= "E"
+LETTERS[earlyletters]
+```
+
+This can be simplified by doing the comparison directly within the grid reference.
+
+```{r 03a_datamanip-33}
+LETTERS[ LETTERS <= "e" ]
+```
+
+You're not limited to single comparisons either. You can use AND (`&`) and OR (`|`) to produce compound statements. 
+
+If we wanted every letter between (and including) "B" and "E" we can check to see which elements of `LETTERS` are "B" or are after "B" and combine this with our existing "E" check using an `&`.
+
+```{r 03a_datamanip-34}
+LETTERS[ LETTERS <= "E" & LETTERS > "B"]
+```
+
+### Conditional filters for data.frames
+If we wanted to select all columns in our data.frame that had names beginning with "a" or "b", we could compare the names to the letter "c" and use this set of boolean values to be our filter.
+
+To extract the column names, we can use `colnames()`. This returns a vector of character values and we can run a comparison.
+
+```{r 03a_datamanip-35}
+abcols <- colnames(mydf)<"c"
+```
+
+Now we can use that in our grid reference system.
+
+```{r 03a_datamanip-36, eval=FALSE}
+mydf[,abcols]
+```
+
+```{r 03a_datamanip-37, echo=FALSE}
+kable(mydf[,abcols])
+```
+
+Using the grid reference system, if we wanted to apply a filter to our rows based on some column's data we would first need to extract the column's values, then produce our filter, then apply our filter.
+
+```{block 03a_datamanip-38, type="warning"}
+Don't worry if this sounds long-winded and crazy to you. You're thinking that because it's true! A little bit later in this section we'll cut out some of the craziness.
+```
+
+For instance, if we wanted everything from our table where our rows had a value for column "a" less than four, we would need to get column "a"s values, compare it to 4, and use this in our row area of the grid reference.
+
+```{r 03a_datamanip-39, eval=FALSE}
+lt4 <- mydf[ , "a"] < 4
+mydf[lt4, ]
+```
+
+```{r 03a_datamanip-40, echo=FALSE}
+lt4 <- mydf[ , "a"] < 4
+kable(mydf[lt4, ])
+```
+
+Or we could have written it all in one go.
+```{r 03a_datamanip-41, eval=FALSE}
+mydf[mydf[ , "a"] < 4, ]
+```
+
+### Recycling values
+When R has two mismatched vectors in terms of length, it will try to recycle values. We saw this earlier when we worked with vectors.
+
+You can use this to provide shorter vectors of value (although I don't recommend you do so often).
+
+An elegant demonstration of this is returning every other letter in the alphabet. 
+
+We need a filter that puts TRUE against the odd number positions and a FALSE against the even number positions. We could write a comparison that checks the position number is odd but that would be quite long winded. 
+
+Instead, we can rely on recycling to take a pair of values and repeat them. We can provide a vector containing TRUE and FALSE it will recycle them so that every odd numbered position gets a TRUE and every even numbered position gets a FALSE.
+
+```{r 03a_datamanip-42}
+LETTERS[c(TRUE,FALSE)]
+```
+
+
+## Mixed grid references
+
+You cannot provide a mix of element positions, element names, and booleans in a single vector to get a subset. This is because you have to provide a vector and a vector containing a mix of datatypes will convert everything to a single datatype.
+
+We can verify with our list. We've seen how referring to position 1 works, and referring to the element called "a", so if we wanted to specify both of these we could put them in a vector. The conversion to strings happens though and then  R searches the list for an element called "1", can't find it, and returns an NA.
+
+```{r 03a_datamanip-43}
+c(1,"a")
+mylist[c(1,"a")]
+```
+
+Whilst you can't combine the methods in a single section of the grid reference system, you can use different systems in different positions. This is most useful for data.frames when we want to subset our rows by a condition, and only return certain columns at the same time.
+
+```{r 03a_datamanip-44, eval=FALSE}
+mydf[1:2, c("a","b")]
+```
+
+```{r 03a_datamanip-45, echo=FALSE}
+kable(mydf[1:2, c("a","b")])
+```
+
+## Other reference methods
+If you need to select a given named value or column from an object, there are some alternative selection methods you'll use.
+
+There are double square brackets for when you expect one, and only one, named element. This is mainly used for lists.
+```{r 03a_datamanip-46}
+mylist[["a"]]
+```
+
+There is a much nicer option though for lists and data.frames. That option is using the dollar sign (`$`) to access named elements in lists or columns in data.frames.
+
+```{r 03a_datamanip-47}
+mylist$a
+```
+
+```{r 03a_datamanip-48}
+mydf$b
+```
+
+The `$` methodology has some benefits: It uses fewer characters and you can use code-completion with it.
+
+We can use both these notations inside our grid reference system. This becomes very handy for writing row conditions for data.frames.
+
+Taking our earlier example of subsetting rows where column "a"'s values are less than 4 becomes much simpler.
+
+```{r 03a_datamanip-49, eval=FALSE}
+mydf[ mydf$a < 4 , ]
+```
+
+```{r 03a_datamanip-50, echo=FALSE}
+mydf[ mydf$a <4, ]
+```
+
+```{block 03a_datamanip-51, type="future"}
+This is the old-school way of working with data.frames. It's important to be able to write queries of your data this way, or at least read other people's code but as soon as you can you should move onto the `data.table` or `tidyverse` ways of working with data.frames. The next book in this series will focus on the `tidyverse` way of working with data.frames.
+```
+
+# Changing objects
+By utilising our reference systems, not only can we select data of interest to us, but we can add new data, update existing values, and even delete values.
+
+You can update part or all of simple objects by assigning new values against a grid-reference.
+
+Adding additional values in a vector involves specifying new element positions using the grid system and assigning a value to that part of the object.
+```{r 03a_datamanip-52}
+letters[27]<-"|"
+tail(letters)
+```
+
+Similarly, we can specify a row in a data.frame and provide all the necessary values to make a complete row.
+
+```{r 03a_datamanip-53}
+mydf[6,] <- c(pi, Inf, -Inf)
+```
+
+```{r 03a_datamanip-54, echo=FALSE}
+kable(mydf)
+```
+
+For data.frames, if you want to create a new column, it's usually much easier to use our `$` notation. You specify the column and assign it new values.^[This works because data.frames are actually lists so you're creating a new element containing these values.]
+
+```{r 03a_datamanip-55}
+mydf$d<-5
+```
+
+```{r 03a_datamanip-56, echo=FALSE}
+kable(mydf)
+```
+
+Updating values involves providing a set of values of the same size as the destination. 
+
+Here I overwrite the first three elements in our lower case alphabet vector with the first three elements in our upper case alphabet vector.
+
+```{r 03a_datamanip-57}
+letters[1:3] <- LETTERS[1:3]
+head(letters)
+```
+
+I can update rows by specifying the row and providing a complete set of new values.
+
+```{r 03a_datamanip-58}
+mydf[1, ]<- 1:4
+```
+
+```{r 03a_datamanip-59, echo=FALSE}
+kable(mydf)
+```
+
+If you provide something that is not the same size, R will apply the recycling rules. Again, this is nifty and terrible at the same time.
+
+Even though there are currently four columns in our table, we're only providing two values here. Those two values will be recycled across the columns.
+
+```{r 03a_datamanip-60}
+mydf[2, ]<-1:2
+```
+
+```{r 03a_datamanip-61, echo=FALSE}
+kable(mydf)
+```
+
+If you want to delete values, you can overwrite an object after doing a negative selection. Here I remove the first row of the data.frame.
+
+```{r 03a_datamanip-62}
+mydf<-mydf[-1,]
+```
+
+```{r 03a_datamanip-63, echo=FALSE}
+kable(mydf)
+```
+
+An alternative method is to specify a subset and assign the the value NULL. NULL removes contents in lists and data.frames.
+
+In a list, I can specify one or more elements and assign NULL to it, in order to remove the specific elements.
+
+```{r 03a_datamanip-64}
+mylist[2]<-NULL
+mylist
+```
+
+I can remove a column in a data.frame by assigning NULL to it.
+```{r 03a_datamanip-65}
+mydf$c<-NULL
+```
+
+```{r 03a_datamanip-66, echo=FALSE}
+kable(mydf)
+```
+
+Rows usually get deleted by selecting everything but the the rows you want to discard and overwriting the data.frame variable.
+
+```{r 03a_datamanip-67}
+mydf<-mydf[-1,]
+```
+
+```{r 03a_datamanip-68, echo=FALSE}
+kable(mydf)
+```
+
+
+# Summary
+In R, you can subset objects using positive, negative, and boolean values.  You're able to apply the same methodology to vectors, lists, and data.frames.
+
+When working with data.frames or lists you can use the dollar (`$`) notation to refer to values in a succinct way. You can use this within data.frame subsets to build filters for rows based off the values in columns.
+
+Inserting, updating, or deleting values usually involves specifying a subset and assigning values to it. When deleting, you often assign a value of NULL. You can also use NULL to remove variables in a similar fashion.
+
+# Data manipulation exercises
+1. Select all `LETTERS` before "X"
+2. Select the first 5 rows from the built-in data.frame `iris`
+3. Select the first 2 columns from `iris`
+4. Select the column Sepal.Length from `iris` by name
+5. Select rows from the `iris` data.frame where the `Sepal.Length` is greater than 5.8cm
+6. Select rows from the `iris` data.frame where the Sepal.Width is below the average for that column
+7. Select everything from `iris` except the Species column
+8. Create a copy of the `iris` data that just contains the first 100 rows and call it `myIris`
+9. Update the species column to the value "Unknown" in `myIris`
+10. Delete rows from `myIris` where the sepal length is greater than 5.5

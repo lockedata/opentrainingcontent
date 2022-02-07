@@ -1,0 +1,33 @@
+# golem
+
+`golem` is a package designed to help people develop bigger shiny applications. If provides a template shiny app and uses a package structure to maintain dependencies and shiny code in **modules**.
+
+```{r eval=FALSE}
+remotes::install_github("ThinkR-open/golem")
+```
+
+
+```{r eval=FALSE, tidy=FALSE}
+golem::fill_desc(
+  pkg_name = , # The Name of the package containing the App 
+  pkg_title = , # The Title of the package containing the App 
+  pkg_description = , # The Description of the package containing the App 
+  author_first_name = , # Your First Name
+  author_last_name = , # Your Last Name
+  author_email = , # Your Email
+  repo_url = NULL) # The (optional) URL of the GitHub Repo
+
+golem::use_recommended_dep()
+```
+
+Structuring the application can be done with `golem` functions:
+
+```{r eval=FALSE}
+golem::use_utils_ui()
+golem::use_utils_server()
+golem::add_module(name = "this")
+golem::use_recommended_tests()
+```
+
+## Exercise
+Create a shiny project using golem. Structure it with a server and a ui component and present the iris data with a species filter in the application.

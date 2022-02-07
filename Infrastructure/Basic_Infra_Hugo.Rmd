@@ -1,0 +1,106 @@
+# Hugo
+
+## Introduction
+Hugo is a static site generator. This means that it is a technology to combine content with templates in order to produce a valid website that doesn't need server-side components to maintain it.
+
+Hugo is one of many static site generators and is set apart by a few factors:
+
+- The use of Go means that Hugo can be installed extremely easily and runs very quickly
+- The pace of improvement and quality of Hugo as an open source project means that Hugo sites can be incporate increasingly sophisticated techniques
+- Hugo contains pipelines for processing assets like CSS to enable Hugo-built sites load more quickly
+- The templating system is functionally rich whilst being fairly intuitive
+
+Installing Hugo is usually a very simple single install:
+
+- Mac: `brew install hugo`
+- Linux: `brew install hugo`
+- Windows: `choco install hugo-extended -confirm` or [download the exe](https://github.com/gohugoio/hugo/releases) (making sure to add the exe to somewhere on your PATH)
+
+## Developing locally with Hugo
+Hugo is a command-line executable that can be run locally help us build our website. The speed of Hugo means that we can watch sites reload every time we hit save!
+
+1. Create a new site with `hugo new site myfirstsite`
+2. Change directory to the site `cd myfirstsite`
+3. Run the site with `hugo serve`
+4. Visit the site, usually at <https://localhost:1313>
+5. Make changes to your files and watch the site reload!
+
+As Hugo uses markdown, HTML, and CSS, any developer tool that supports these can be used. We recommend the use of [VS Code](https://code.visualstudio.com/) for a pure Hugo project if you do not have a preferred tool for these already.
+
+## Structure
+A Hugo project has some key components:
+
+- `archetypes` holds templates for different types of content files
+- `assets` contains files like CSS and JS to be included and optionally processed to perform compression etc
+- `content` contains markdown documents that will be turned into webpages
+- `layouts` is a folder containing templates written just for inclusion in this project
+- `static` is a folder for general files like images to be used by the site
+- `themes` holds a directory per theme where each theme provides templates and/or assets to be used in the generation of site pages
+
+![The Hugo transformation process](img/hugo_transformation.jpg)
+
+When we develop the site, we need to be concerned about `layouts`, `assets`, and `themes` but the content writer only needs to be concerned about the `content` and `static` directories.
+
+## Templates
+The next level of depth in terms of constructing a site using Hugo is the use of templates. Templates govern how pages are produced and include reusable components called partials and shortcodes for inclusion in templates and content respectively.
+
+Templates for pages involve:
+
+- `baseof.html` which provides the template for governing the top and bottom of every html file
+- `single.html` is the template what is called a "leaf-level page", which is a standalone page that has no nested pages, eg a blog post
+- `list.html` is the template for a page that links to more pages in that section, eg a page for blog posts with a given tag
+
+Each of these templates can also use partials, reusable template snippets.
+
+Templates in Hugo typically mix HTML with template language for injecting data and metadata from content files into the template. This is done with pairs of curly braces eg `{{ instruction }}`.
+
+```html
+<html>
+<head> <!-- metadata --> </head>
+<body>
+<h1>{{ .Title }}</h1>
+{{ .Content }}
+</body>
+</html>
+```
+
+The templating capability supports a wide arrange of functions, variables, and iterators ensuring we can build very impressive outputs.
+
+> Note, Hugo can have multiple templates for a given output stored in `layouts`, and in multiple themes in `themes`. There is a precedence order that selects the file "closest" to the content directory so that you can override theme level items where appropriate.
+
+## Content
+To include written content in our Hugo project, we add markdown (.md) files to our `content/` directory. Each markdown file will contain metadata at the top of the file which includes parameters to be included in the templates for producing pages. This metadata can be TOML, YAML, or JSON - most commonly, YAML is used.
+
+```md
+---
+title: my blog title
+date: 2020-06-07
+author: Steph Locke
+image: img/awesome-graphic.jpg
+---
+
+Content goes here
+```
+
+We can create these files as either `content-title.md` or `content-title/index.md`. 
+
+The use of `content-title.md` gives you a very simple way to get started and you use the full markdown syntax, and will support referencing files in the static directory. In a `content-title.md`, this would look like: 
+
+```md
+![example for basic md file ref](img/awesome-graphic.jpg)
+```
+
+This will pick up a file called awesome-graphic.jpg that is stored in `static/img/`.
+
+Using `content-title/index.md` seems a little more complicated, however, this allows us to leverage page bundles. Page bundles enable us to add images and things into the folder next to the content. This makes referencing the files easier but also yields the ability to query their metadata and preprocess them. At its simplest though, in a `content-title/index.md`, this would look like: 
+
+```md
+![example for page bundle ref](awesome-graphic.jpg)
+```
+
+## Exercise
+1. Install Hugo (if not already done) >=0.65
+2. Install the Hugo Academic starter by following [these instructions](https://sourcethemes.com/academic/docs/install/#install-with-git)
+3. Unpack the demo content `cp -av themes/academic/exampleSite/* .`
+4. Use `hugo serve` to get the site working locally
+5. Make changes to `config/_default/config.toml` and other areas to start configuring the site

@@ -1,0 +1,65 @@
+# reticulate
+
+## Purpose
+Use `reticulate` to integrate python into your R workflows.
+
+## Requirements
+- `reticulate` package required
+- A python installation required
+- Python install in $PATH ideally
+
+```{r Basic_R_reticulate-1}
+library(reticulate)
+py_discover_config()
+```
+
+## Basics
+The `reticulate` package opens contexts to packages via `import()`.
+
+```{r Basic_R_reticulate-2}
+scipy <- import("scipy")
+```
+
+These contexts then make package functionality available as methods.
+
+```{r Basic_R_reticulate-3}
+scipy$amin(c(1,3,5,7))
+```
+
+Get access to the default python functionality with some extra functions.
+
+```{r Basic_R_reticulate-4}
+main <- import_main()
+py <- import_builtins()
+```
+
+Create python objects and assign them to memory.
+```{r Basic_R_reticulate-5}
+results <- scipy$amin(c(1,3,5,7))
+``` 
+
+Note that you currently cannot translate between pandas data.frames and R data.frames without utilising an intermediate write to disk step.
+
+## Tensorflow
+Tensorflow, a deep learning package in python, has been wrapped in R.
+
+```{r Basic_R_reticulate-6, eval=FALSE}
+library(tensorflow)
+#install_tensorflow()
+sess = tf$Session()
+hello <- tf$constant('Hello, TensorFlow!')
+sess$run(hello)
+```
+
+Check out the [mnist tutorial](https://tensorflow.rstudio.com/tensorflow/articles/tutorial_mnist_beginners.html) to see a more indepth example of running tensorflow via R.
+
+## Exercise
+1. Import the python package requests
+2. Make a request using the get function and extract the content attribute
+
+```{r Basic_R_reticulate-7, echo=FALSE, results="hide"}
+c <- import("requests")
+c$get("https://google.co.uk")$content
+```
+## Next steps
+1. Read the [docs](https://rstudio.github.io/reticulate/index.html)

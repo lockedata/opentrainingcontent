@@ -1,0 +1,246 @@
+
+# Candidate models
+
+## All variables
+Use all variables to get a view of how maximum accuracy on your training set. In practice, you won't select this model but it gives you important context about the upper bound of accuracy with your current variables.
+
+```{r 06_MOD20-1}
+fullmodel<-glm(Species ~ . , data = iris, family=binomial)
+summary(fullmodel)
+```
+
+## A few strong variables
+Create model with only a few variables. Select the ones that have the most predictive power. A simple model is easy to implement and understand so if this turns out to be "good enough" you could implement it. It also provides a lower bound for accuracy.
+
+```{r 06_MOD20-2}
+simplemodel <- glm(Species ~ Sepal.Width + Sepal.Length, data=iris, family=binomial)
+summary(simplemodel)
+```
+
+## Stepwise regression
+We can also do a **stepwise** approach that considers lots of models and stops when adding (**forward stepwise**) or removing (**backwards stepwise**) variables ceases to change the model performance much.
+
+There is a built-in algorithm that will do one or the other, or both.
+
+```{r 06_MOD20-3}
+steppedmodel<-step(fullmodel, direction="both",trace = FALSE)
+summary(steppedmodel)
+```
+
+## Other models
+You would also try to consider a "common-sense" model where you select features based on experience. You would also do other types of models that would perform a classification.
+
+## Exercise
+1. Create an all variables model for `train_y`
+2. Create a "Women and children first!" model
+3. Create a stepwise model
+4. Using your knowledge and the info about variable importance, make your own model
+
+```{r 06_MOD20-4, eval=FALSE, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+all<-glm(train_y ~ . , data=train_x, family = binomial)
+summary(all)
+
+wandc<-glm(train_y ~ age + sex, data=train_x, family = binomial)
+summary(wandc)
+
+steps<-step(all, direction = "both", trace=FALSE)
+summary(steps)
+
+myguess<-glm(train_y ~ age + sex + pclass + cabin + sibsp, data=train_x, family = binomial)
+summary(myguess)
+```
+
+# Evaluating models
+
+## `broom`
+Use `broom` to make tidy versions of model outputs.^[Doesn't currently work for `caret::train` outputs, alas.]
+
+```{r 06_MOD20-5}
+library(broom)
+
+# Coefficients
+knitr::kable(tidy(fullmodel))
+
+# Fitted data
+knitr::kable(head(augment(fullmodel)))
+
+# Key statistics
+knitr::kable(glance(fullmodel))
+```
+
+## Interpreting coefficients
+### Sense-checking
+It is worth checking that the coefficients match expectations. 
+
+If a coefficient is the opposite sign to what you expect, then it can be because the variable is correlated with another variable. 
+
+For example, let's say we had two fields Total Income and Self-employed Income. These two variables would be very heavily correlated as one is part of the other. In such a case Total Income could end up with a positive coefficient, but Self-employed Income could have a negative coefficient. This would be because Self-employed Income might be positively correlated generally but once Total Income has been fitted, Self-employed Income is negative to reduce the overall values appropriate to a Self-employed person's income.
+
+In such circumstances, consider:
+
+- removing a variable
+- unlinking the two variables
+- include one term and it's interaction with the other
+
+### Low impact coefficients
+If coefficients are small, they have little impact on overall values. These are candidates for removal in the case of continuous variables, or being collapsed into the base factor level in the case of categorical values.
+
+### P-Values
+Each coefficient gets a p-value that indicates whether the coefficient's weighting is considered significant. In R, this is made easier with the placement of asterixes at the end. 
+
+Check coefficients with high p-values as these are candidates for removal, or in the case of factors, collapsing.
+
+### Exercise
+1. Look at the summaries for each model
+1. Are there any counter-intuitive coefficients?
+1. Are there any columns that indicate they could be removed?
+
+```{r 06_MOD20-6, eval=FALSE, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+summary(all)
+summary(wandc)
+summary(steps)
+summary(myguess)
+
+
+# Missing Ages could fold into Adults category
+# parch could be removed
+# cabins needs further investigation
+# The other category for embarked could fold into Southampton
+```
+
+## Key metrics
+
+### Residual deviance
+Residual deviance is a measure of how much error is in the model, after considering all the variables in the model.^[Null deviance is the measure of error when considering just the intercept] The smaller the residual deviance, the better.
+
+```{r 06_MOD20-7}
+deviance(fullmodel)
+```
+
+### AIC
+Akaike’s information criterion (AIC) is a measure of information captured by a model and penalises more variables over fewer variables. The smaller the AIC, the better.
+
+```{r 06_MOD20-8}
+AIC(fullmodel)
+```
+
+### Exercise
+1. Use `broom`s `glance` function for each model and combine the results using `rbind`
+2. Is there a single model that minimises deviance and AIC at the same time?
+3. Based on information so far, which model would you choose?
+
+```{r 06_MOD20-9, eval=FALSE, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+modelresults<-rbind(glance(all),glance(wandc), glance(steps), glance(myguess))
+modelresults$model<-c("all cols", "women & children", "stepwise", "educated guess")
+
+knitr::kable(modelresults)
+
+knitr::kable(modelresults[c(which.min(modelresults$deviance),
+                            which.min(modelresults$AIC)),])
+
+# I would pick the stepwise model as it has slightly better AIC
+```
+
+## Classification rates
+We can look at how well models correctly classify cases in our training and our test data. This is good if we are planning on using a logistic regression for classification purposes. You should usually see the accuracy go down when producing a confusion matrix for the test data.
+
+```{r 06_MOD20-10, eval=FALSE}
+training_pred<-ifelse(predict(fullmodel,training_x)>0, "Control","Impaired")
+confusionMatrix(training_pred,training_y)
+
+testing_pred<-ifelse(predict(fullmodel,testing_x)>0, "Control","Impaired")
+confusionMatrix(testing_pred,testing_y)
+```
+
+### Exercise
+1. Produce a `confusionMatrix` for each of your models on the test data
+2. Which is the most accurate at predicting Survival?
+3. Is the same model the most accurate overall (i.e. using the balanced accuracy metric)?
+
+```{r 06_MOD20-11, eval=FALSE, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+test_preds<-data.frame(
+  all=1*(predict(all,test_x)>0),
+  wandc=1*(predict(wandc,test_x)>0),
+  steps=1*(predict(steps,test_x)>0),
+  myguess=1*(predict(myguess,test_x)>0)
+)
+
+confusionMatrix(test_preds$all,test_y)
+confusionMatrix(test_preds$wandc,test_y)
+confusionMatrix(test_preds$steps,test_y)
+confusionMatrix(test_preds$myguess,test_y)
+
+accScores<-sapply(test_preds, function(x){
+                    confusionMatrix(x,test_y)$overall["Accuracy"]
+                    })
+accScores[which.max(accScores)]
+
+balAccScores<-sapply(test_preds, function(x){
+                    confusionMatrix(x,test_y)$byClass["Balanced Accuracy"]
+                    })
+balAccScores[which.max(balAccScores)]
+
+# Are they the same?
+which.max(accScores)==which.max(balAccScores)
+```
+
+## Discriminatory power
+Another key case for performing a logistic regression is to get a probability for something happening. In such cases, it's usually the relative probability that is more important than the absolute probability. 
+
+For instance, in our example relative risk of Alzheimers is more important for prioritising screening and intervention than the actual risk.
+
+We can use a Receiver Operating Curve (**ROC**) graph to get measures of discriminatory power. A ROC chart ranks each point by predicted score and calculates the cumulative true positive (*Sensitivity*) and false positive (*1- Specificity*) rates and plots these. 
+
+In a ideal world, the model would get 100% of the positives correctly classified, without incorrectly classifying anything. 
+
+In a random world, the model gets as many right as it gets wrong. The diagonal line on the chart, represents that scenario.
+
+Each model is usually somewhere between these two cases. The area under the ROC curve but above the Random line can be used to calculate the **Area Under the Curve (AUC)**. This is then transformed into the **Gini coefficient** to present a percentage level of discriminatory power.
+
+This can be used across models for the same data, and the higher the better. You should usually see the gini coefficient go down when producing a chart for the test data.
+
+```{r 06_MOD20-12, eval=FALSE,tidy=FALSE}
+library(optiRum)
+multiplot(
+  # Plot model 1
+  giniChart(predict(fullmodel, training_x),training_y),
+  giniChart(predict(fullmodel, testing_x),testing_y),
+  # Plot model 2
+  giniChart(predict(steppedmodel, training_x),training_y),
+  giniChart(predict(steppedmodel, testing_x),testing_y),
+  # Plot model 3
+  giniChart(predict(simplemodel, training_x),training_y),
+  giniChart(predict(simplemodel, testing_x),testing_y),
+  #Specify layout
+  layout=matrix(1:6, ncol=2,byrow = TRUE)
+)
+```
+
+### Exercise 4
+1. Produce a gini chart for each of your models based on test data
+2. Which has the best gini coefficient?
+3. Taking into account model complexity, AIC, accuracy, and the gini coefficient which model would you pick?
+
+```{r 06_MOD20-13, eval=FALSE, echo=FALSE, results='hide', message=FALSE, warning=FALSE, tidy=FALSE}
+multiplot(
+  # Plot model 1
+  giniChart(predict(all, train_x),train_y),
+  giniChart(predict(all, test_x),test_y),
+  # Plot model 2
+  giniChart(predict(wandc, train_x),train_y),
+  giniChart(predict(wandc, test_x),test_y),
+  # Plot model 3
+  giniChart(predict(steps, train_x),train_y),
+  giniChart(predict(steps, test_x),test_y),
+  # Plot model 4
+  giniChart(predict(myguess, train_x),train_y),
+  giniChart(predict(myguess, test_x),test_y),
+  #Specify layout
+  layout=matrix(1:8, ncol=2,byrow = TRUE)
+)
+
+giniScores<-sapply(test_preds, giniCoef, test_y)
+
+c(which.max(accScores),which.max(balAccScores),which.max(giniScores))
+# woohoo my guess looks pretty nifty!
+```

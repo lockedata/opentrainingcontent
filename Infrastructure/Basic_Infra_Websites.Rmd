@@ -1,0 +1,226 @@
+# (PART) Static sites {-} 
+# Website basics
+Websites are typically constructed with three technologies:
+
+- Hyper Text Markup Language (HTML) that is used to support directives about content
+- Cascading Style Sheets (CSS) that is used to assign style to HTML elements
+- JavaScript (JS) that is used to provide interactive capabilities or computations
+
+Some websites also have "server-side" components, where data and content is stored on a server and a language like PHP (or even JavaScript frameworks like Angular.JS) is used to retrieve information for presentation in the website when the site is loaded. This is how websites like WordPress work.
+
+There are many websites that do not need content to be stored server side, or include content that could be retrieved via APIs using JavaScript. to reduce the amount of infrastructure that is needed in these circumstances there are many *static site generators* that use templating to produce bundled HTML, CSS, and JavaScript code that can be hosted without the need of an ongoing server or database to support its delivery.
+
+## HTML
+Html is the architecture of your page, the content and the instructions on how to lay that content out. Html is made of up elements; such as a title, or a paragraph. Elements are then made up of tags that wrap content. Here's an example: 
+
+```html
+<h1>A heading</h1>
+<h2>A smaller heading</h2>
+<p>A paragraph</p>
+```
+
+Which would render like this:
+
+---
+
+<h1>A heading</h1>
+<h2>A smaller heading</h2>
+<p>A paragraph</p>
+
+---
+
+Notice the forward slash in the second tag of each element? That's how you define the start and end (or in HTML lingo, the opening and closing tags) of an element. This allows you to nest elements. For instance, if we wanted to make a heading also be a link, we could nest a link element (which uses the `a` tag) inside the heading element like this:
+
+```html
+<h1><a href="url">A heading that's also a link!</a></h1>
+```
+
+---
+
+<h1><a href="url">A heading that's also a link!</a></h1>
+
+---
+
+Because we don't close the heading (`h1` tags) element until after we close the link (`a` tags) element, the link element is rendered within the heading. In this case this makes the heading a link.
+
+Learn more about elements here: [w3schools.com/html/html_elements](https://www.w3schools.com/html/html_elements.asp)
+
+Notice the extra bit inside the `a` element's opening tag? That's an attribute. Attributes are how we go beyond the basic structural rules of HTML, and can do things like provide a destination for a link, give something a popup label, or even tell a screen reader how to read the element. While a tag tells the page what kind of content an element is, an attribute applies special rules to the element. Different elements may have special attributes, some expect them and won't work properly without them (like the `a` element, that needs to know the URL you want to link to), and there are also attributes that are common to all elements. 
+
+The most common attributes you'll see across elements are `class` and `id`... and that brings us to CSS!
+
+## CSS
+While HTML is the architecture of a page, CSS is the style, the look and feel. CSS takes references to specific elements in the HTML of your site (called selectors) and tells your page how those elements should look. It's usually stored in a separate, `.css` file and linked to in the top of the HTML file (see the Important Notes section) although it can also be included at the top of your HTML file.
+
+```css
+h1 {
+    font-style: italic;
+}
+h2 {
+  color: red;
+}
+p {
+  color: #4b4b4b;
+  font-weight: 300;
+}
+```
+
+>Why is color done differently for h1 and p? Color, like many declarations, can take various formats of input. It can take named colors (that are part of the web standard), hex code colors like the one shown here, and even RGB and RGBA colors. Here I've used hex to get a more specific color for my P elements.
+
+Here we're using the most basic method of selecting: the name of the element's tag. Inside the curly braces following our selector (the Declaration Block) we can specify rules for styling the element(s) in question. For instance; we've said that `h1` elements should be italic, and that `h2` elements should be red...
+
+---
+
+<h1 style="font-style: italic"><a href="url">A heading that's also a link</a></h1>
+<h2 style="color: red">A smaller heading</h2>
+<p style="color: #4b4b4b; font-weight: 300">A paragraph</p>
+
+---
+
+So far we've only selected elements by their name, using element selectors, but this means that every element of the same type gets the same styles. You may want a heading at the top of the page to look different to a heading elsewhere, and there are a number of different ways to do this, but let's look at class/id selectors:
+
+Classes and IDs are a way of saying "this element belongs to this group" and is used to set specific styling (among other things.) As we discussed at the end of the section on HTML, we use an element's attributes to assign a class or an ID, and then we can select them in the CSS:
+
+```html
+<h1 id="big-header"><a href="url">A heading that's also a link!</a></h1>
+<h2>A smaller heading</h2>
+<h1 class="other-big-headers">A different big heading</h1>
+<p>A paragraph</p>
+<h1 class="other-big-headers">A different big heading</h1>
+<p>A paragraph</p>
+```
+
+```css
+#big-header {
+  font-size: xx-large;
+}
+.other-big-headers {
+  font-size: 20px;
+  color: green;
+}
+```
+
+---
+
+<h1 style="font-style: italic; font-size: xx-large;"><a href="url">A heading that's also a link</a></h1>
+<h2 style="color: red;">A smaller heading</h2>
+<h1 style="font-style: italic; color: green; font-size: 20px;">A different big heading</h1>
+<p style="color: #4b4b4b; font-weight: 300;">A paragraph</p>
+<h1 style="font-style: italic; color: green; font-size: 20px;">A different big heading</h1>
+<p style="color: #4b4b4b; font-weight: 300;">A paragraph</p>
+
+---
+
+>ID is used to identify a unique element, like a page header or a specific link that needs special formatting, and should only be used once on a page. A class is used to identify common elements, like comments in a comment section or section headings, and can be used wherever you like. In CSS, ID's are selected using `#` followed by the ID name, and classes using `.` followed by the class name.
+
+There are lots of ways to select elements, from the simple ones shown here, to complex ones like `#home div>div:first-child` which selects the first element (of any type) inside a div element that is (directly) inside another div that exists anywhere within an element with the id of home!
+
+To learn more about selectors, read here: [w3schools.com/css/css_selectors](https://www.w3schools.com/css/css_selectors.asp)
+
+Notice how the green headings are still in italics, even though we didn't tell them to do that in the Declaration Block for their class? That's because we said that all `h1` elements should be italic, and we didn't override that in the class's Declaration Block. CSS (Cascading Style Sheets) is read from top to bottom, through all the CSS documents that have been linked, meaning if you set rules for the same element in two places, the later declaration will be the one that is displayed. CSS also uses a concept called Specificity, where more specif selectors override less specif selectors; so our `h1` selector's declarations are overridden by matching declarations in our class section. You can see this working where we overrode the `h1` declaration making all `h1` elements blue, to make any `h1` element with the class of `other-big-headers` green.
+
+Learn more about Specificity here: [w3schools.com/css/css_specificity](https://www.w3schools.com/css/css_specificity.asp)
+
+CSS controls everything from the color of letters, and whether a list should have square or circle markers, to animations, and how a page looks different on a mobile phone. However, both the style of a page, and the way we interact with it, can be extended even further with JavaScript...
+
+## JavaScript
+JavaScript is a client side (meaning it runs on your browser) programming language that can be used to extend the functionality of your webpage. For instance, JavaScript can be used to validate forms before they are submitted, or to make dynamic tables of contents. For Hugo websites, you won't need much, if any, JavaScript, but it's worth understanding what it is.
+
+JavaScript can be written in `script` tags, and then used elsewhere in your HTML by associating an element with the script using the element's ID attribute.
+
+```html
+<p id="date">no date</p>
+<script>document.getElementById('date').innerHTML = Date();</script>
+```
+
+The above code would insert the date into the paragraph element using a `p` tag with the ID of date. If the code script is unable to run, the default value "no date" would be displayed instead.
+
+Learn more about JavaScript here: [w3schools.com/js](https://www.w3schools.com/js/default.asp)
+
+Although you can write JavaScript code into the HTML like this, it's better to instead use the `script` tags to create a reference element to an external `.js` file, like with CSS files. 
+
+```html
+<script src="scripts.js"></script>
+```
+
+As with CSS, you can have multiple references to different JavaScript files, and this allows us to easily utilize the wide range of JavaScript libraries (pre-built scripts) that are available to us. The library you're most likely to encounter is Bootstrap: Bootstrap includes JavaScript and CSS files that can be added to a website project to speed up development by providing pre-built ways of doing common things, like creating tables of contents, in a uniform way.
+
+To learn more, and get started with Bootstrap, go here: [getbootstrap.com](https://getbootstrap.com/)
+
+## Important notes
+The HTML and CSS we've used here are only examples, intended to display the concepts of these languages. They're not complete or even good HTML or CSS. For instance, the full page would actually look more like this:
+
+```html
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Example</title>
+  <meta name="description" content="An example of HTML, CSS, and JavaScript">
+  <meta name="author" content="Steph Locke">
+
+  <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+    <header>
+        <h1><a href="#">A heading that's also a link!</a></h1>
+    </header>
+    <section>
+        <h2>A smaller heading</h2>
+        <article>
+            <h1 class="other-big-headers">A different big heading</h1>
+            <p>A paragraph</p>
+        </article>
+        <article>
+            <h1 class="other-big-headers">A different big heading</h1>
+            <p>A paragraph</p>
+        </article>
+    </section>
+    
+    <script src="js/scripts.js"></script>
+</body>
+</html>
+```
+
+```css
+header h1 {
+    font-style: italic;
+    font-size: xx-large;
+}
+
+article h1 {
+    font-style: italic;
+    font-size: 20px;
+    color: green;
+}
+section h2 {
+    color: red;
+}
+article p {
+    color: #4b4b4b;
+    font-weight: 300;
+}
+
+```
+Here we're using Semantic HTML; a way of declaring the intended use of the various parts of the page. This is important for accessibility, and search engines prefer it too. By using these semantic blocks (like `header` and `section`) we're able to select the blocks themselves in our CSS, to make targeting specif elements easier. It's better to select elements this way where possible, as if you were to change the name of an ID or class in your CSS, you'd have to update every link to them in the HTML too!
+
+Learn more about Semantic HTML here: [w3schools.com/html/html5_semantic_elements](https://www.w3schools.com/html/html5_semantic_elements.asp)
+
+You'll also notice there's a lot more to the HTML. Full HTML requires `HTML`, `head`, and `body` elements. 
+
+ - The `HTML` element (also preceded by an HTML declaration) wraps the entire document, declaring that it's all HTML
+ - The `head` element contains important information about the page and links to additional files, like external CSS
+ - The `body` element contains the content of your page
+
+Finally, note how we link to the CSS file in the Head. We can link to multiple CSS file, so remember that the order in which we link them will impact overriding styles. We link to the JavaScript file at the end of the body in order to ensure that the JavaScript is only loaded when needed; this helps keep the load time of the page down.
+
+## Exercise
+1. Create an `index.html` file that uses the bootstrap framework for layouts using the [starter template](https://getbootstrap.com/docs/4.0/getting-started/introduction/#starter-template)
+2. Setup a three column layout inside the HTML (hint: [docs](https://getbootstrap.com/docs/4.0/layout/grid/#how-it-works))
+3. In the first column, add an information notice that says "This is a help option" and make it dismissable (hint: [docs](https://getbootstrap.com/docs/4.0/components/alerts/#dismissing))
+4. In the second column, add an information button that links to the [bootstrap website](https://getbootstrap.com/) (hint: [docs](https://getbootstrap.com/docs/4.0/components/buttons/))
+5. In the third column, add an inspirational quote! (hint: [docs](https://getbootstrap.com/docs/4.0/content/typography/#naming-a-source))

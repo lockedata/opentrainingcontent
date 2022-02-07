@@ -1,0 +1,180 @@
+```{r Basic_Python_MonteCarloSimulation-1, include=FALSE}
+library(reticulate)
+use_python("//anaconda/bin/python")
+use_condaenv("py36")
+
+```
+# Monte Carlo Simulation
+
+## Introduction to Monte Carlo simulation
+
+Monte Carlo simulation is a mathematical technique that models risk or uncertainty in systems. It use randomly generated variable data, which are based on probability distributions. Monte Carlo simulation is used in financial, project management, cost, and other forecasting models. 
+
+## Key concepts & steps 
+
+The key steps to a Monte Carlo simulation can be defined as: 
+
+- Define the random events that you wish to model.
+- Choose suitable probability distributions for each random process. 
+- Develop a model that describes the interaction of the random processes in the system. 
+- Repeat the analysis multiple times and save the data from all the model runs. 
+- Visualise the data from the multiple model runs.  
+
+A central concept is that underlying trends can be found if the model is run many times and over a long time period. 
+
+
+## Example
+
+The following example models the length of a queue in a shop. The queue is initially empty but each minute a random number of people (between 0 and 4) both join the queue and are served. These random numbers are generated using the python library `random`.
+
+```{python Basic_Python_MonteCarloSimulation-2, comment=NA, results = 'hold'}
+import random                            
+import matplotlib.pyplot as plt          
+
+endTime = 20                      # define time (in minutes) to run the simulation until, defined in minutes. 
+numberOfModelRuns = 10            # create a variable that dictates how many times the simulation is run 
+
+def simple_queue(endTime):        # creates a function that runs the simulation once
+
+    time = [0]                    # create a vector to store the simulation time 
+    timeNow = 0                   # reset the time to zero each time the simulation is rerun 
+    queueLength = [0]             # reset the queue length to zero each time the simulation is run 
+
+    while timeNow <= endTime:     # loop over the following code for the length of time dictated by 'endTime'
+
+        newPeoplePerMin = random.randint(0,4)         # create a random number of people joining the que/ minute
+        customersServedPerMin = random.randint(0,4)   # create a random number of people served/ minute
+        
+        queueLengthBefore = queueLength[-1]                                           # get the the last calculated queue length  
+        queueLengthNow = queueLengthBefore + newPeoplePerMin - customersServedPerMin  # calculate  queue length
+        if queueLengthNow <0:  queueLengthNow = 0                                   # ensure the queue length never drops below 0
+
+        queueLength.append(queueLengthNow)      # add the new queue length onto the end of a vector 
+        time.append(timeNow)           # add the current time into a vector that stores the previous simulation times 
+
+        timeNow += 1                  # update the simulation time to record that time has passed 
+    
+    plt.plot(time, queueLength)         # plot the results from this model run
+
+runNumberNow = 0              # record how many times the simulation has been run. 
+
+while runNumberNow < numberOfModelRuns: # run the simulation until 'numberOfModelRuns' is reached
+    simple_queue(endTime) #run the simulation once
+    runNumberNow += 1 # update how many times the simulation has been run
+
+plt.ylabel('Number of people in queue') # add axis title 
+plt.xlabel('Time [minutes]') # add axis title 
+plt.show()
+```
+
+The output graph displays queue length for each model run. Try playing around with the variables `numberOfModelRuns` and `endTime` to see trends in the data.  
+
+It is useful to summarise the model data, amending the example code allows us to display the mean and median queue length. 
+
+```{python Basic_Python_MonteCarloSimulation-3, comment=NA, results = 'hold'}
+plt.gcf().clear()
+import random 
+import matplotlib.pyplot as plt 
+import numpy as np 
+
+endTime = 1000            # define time to run the simulation until. We will define this as time in minutes. 
+numberOfModelRuns = 500   # create a variable that dictates how many times the simulation is run 
+queueLengthAllRuns = np.zeros(shape=(numberOfModelRuns, endTime+1))   # create an empty array to save data into
+
+def simple_queue(endTime):      # creates a function that runs the simulation once
+
+    time = [0]          # create a vector in which to store the simulation time 
+    timeNow = 0         # reset the time to zero each time the simulation is rerun 
+    queueLength = [0]   # reset the queue length to zero each time the simulation is run 
+
+    while timeNow < endTime:  # loop over the following code for the length of time dictated by 'endTime'
+
+        newPeoplePerMin = random.randint(0,4)       # create a random number of people joining the que/ minute
+        customersServedPerMin = random.randint(0,4) # create a random number of people served/ minute
+        
+        queueLengthBefore = queueLength[-1]         # get the the last calculated queue length  
+        queueLengthNow = queueLengthBefore + newPeoplePerMin - customersServedPerMin  # calculate  queue length
+        if queueLengthNow <0:  queueLengthNow = 0   # ensure the queue length never drops below 0
+
+        queueLength.append(queueLengthNow)          # add the new queue length onto the end of a vector 
+        time.append(timeNow)            # add the current time into a vector that stores the previous simulation times 
+
+        timeNow += 1                    # update the simulation time to record that time has passed 
+        
+        randomGrey = [random.uniform(0, 1)] * 3 # create a random grey colour to display this data 
+    
+    plt.plot(time, queueLength, color = randomGrey) # plot the results from this model run
+
+    return queueLength # return the queue length data from this model run 
+
+runNumberNow = 0 # record how many times the simulation has been run. 
+
+while runNumberNow < numberOfModelRuns:           # run the simulation until 'numberOfModelRuns' is reached
+    queueLengthThisRun = simple_queue(endTime)    # run the simulation once
+    queueLengthAllRuns[runNumberNow] = queueLengthThisRun   # save the current queue length vector into a column
+    runNumberNow += 1                             # update how many times the simulation has been run
+
+plt.ylabel('Number of people in queue')           # add axis title 
+plt.xlabel('Time [minutes]')                      # add axis title
+
+dataMean = np.mean(queueLengthAllRuns,0)          # calculate the mean queue length at each point in time
+dataMedian = np.median(queueLengthAllRuns,0)      # calculate the median queue length at each point in time
+
+plt.plot(dataMean, 'b', linewidth=4, label="mean")      # plot the mean of the simulation data 
+plt.plot(dataMedian, 'r', linewidth=4, label="median")  # plot the median of the simulation data 
+plt.legend()                                            # show the ledgend 
+
+plt.show()
+```
+
+From the summary data it can see that this model predicts an increasing queue length. Results from models always need to be considered in light of the assumptions and accuracy of the model itself i.e. in this case the validity of the rate at which people join the queue and are served. 
+
+### Exercise 
+
+Create a Monte Carlo simulation of a street food vendor who works an 8 hour day. Simulate income generated through the day based on the number of various items sold e.g. food and drinks. 
+
+### Exercise Solution 
+
+One solution to the exercise is as follows: 
+
+```{python Basic_Python_MonteCarloSimulation-4, comment=NA, results = 'hold'}
+import random                      
+import matplotlib.pyplot as plt   
+
+endTime = 8                     # define time to run the simulation until. 
+numberOfModelRuns = 20          # create a variable that dictates how many times the simulation is run 
+
+def simple_income(endTime):     # creates a function that runs the simulation once
+
+    time = [0]      # create a vector in which to store the simulation time 
+    timeNow = 0     # reset the time to zero each time the simulation is rerun 
+    income = [0]    # reset the income to zero each time the simulation is run 
+
+    while timeNow <= endTime: # loop over the following code for the length of time dictated by 'endTime'
+
+        sandwichesIncome = random.randint(0, 3) * 3   # Number of sandwiches sold multiplied by £3 
+        lemonadeIncome = random.randint(0,5) * 1      # Randomised number of lemonades sold multiplied by £1
+        isItHot = random.randint(0,1)                 # create random a variable which is either 0 or 1 to represent a hot day
+        icecreamsIncome = isItHot * random.randint(0, 8) * 1.5  # if its a hot day multiply number of icereams sold by £1.50 
+                
+        incomeBefore = income[-1]           # get the the last calculated income  
+        incomeNow = incomeBefore + sandwichesIncome + lemonadeIncome + icecreamsIncome # calculate what the income is this hour 
+        
+        income.append(incomeNow)      # add the new income into a vector containing income data 
+        time.append(timeNow)          # add the current time into a vector that stores the previous simulation times 
+
+        timeNow += 1                  # update the simulation time to record that time has passed 
+    
+    plt.plot(time, income)            # plot the results from this model run
+
+runNumberNow = 0 # create a variable that records how many times the simulation has been run; at the start it has never been run 
+
+while runNumberNow < numberOfModelRuns: # run the simulation for as many times as dictated by the variable 'numberOfModelRuns'
+    simple_income(endTime)              #run the simulation once
+    runNumberNow += 1                   # update how many times the simulation has been run
+
+plt.ylabel('Income Today [$]')    # add axis titles 
+plt.xlabel('Time [hours]')        # add axis titles 
+plt.show()
+
+```

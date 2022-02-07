@@ -1,0 +1,290 @@
+# Recommendations
+
+## Recommendations
+Purpose: based on behaviours of others make suggestions based on preferences
+
+
+```{r Basic_Models_Recommendations-1, echo=FALSE}
+library(tidyverse)
+library(recommenderlab)
+
+data(MovieLense)
+image(MovieLense)
+model<- Recommender(MovieLense,method="POPULAR")
+as(predict(model, MovieLense[101], n = 10),"list")
+```
+
+### How these models generally work
+They go through the following steps:
+- **History matrix** Record the interactions between users and items as a user-by-item matrix
+- **Co-occurrence matrix** Transform the history matrix into an item-by-item matrix, recording which items appeared together in user histories
+- **Indicator matrix** Keep only the anomalous (interesting) co-occurrences that will be the clues for recommendation
+
+### Model types
+
+There are different types of recommendation models you can build that are available via `recommenderlab`.
+
+
+- **Alternating Least Squares (ALS)** Takes user and item interactions and switches between viewpoints to determine relative closeness of different values 
+    + **Implicit** Assume preference by the more times an event happened the better it is
+    + **Explicit** Ratings are provided
+- **Association Rules (AR)** Essentially a body of If This Then That rules
+- **Item-based Collaborative Filtering (IBCF)** Identify items that are similar based on user scores 
+- **Popularity** Use frequency and/or ratings to rank items
+- **Random** Recommend items randomly
+- **Re-recommend** Recommend previously purchased/rated items
+- **Singular Value decomposition (SVD)** Generate item-based and user-based similarity models and combine
+- **Funk Singular Value decomposition (SVDF)** Generate item-based and user-based similarity models and combine using a gradient descent technique to combine
+- **User-based Collaborative Filtering (UBCF)** Identify items based on how similar users are
+
+### Common evaluation metrics
+
+For binary outcomes, you can build a confusion matrix as a result you can evaluate:
+
+- Basic rates 
+- Accuracy
+- Balanced accuracy
+- Weighted accuracy
+
+For numeric outcomes, you can use measures of error between known values and predicted.
+
+- RMSE
+- MSE
+- MAE
+
+## Preparing data
+To build a recommendation model you need to prep the data as a matrix. Data can either be binary (yes/no) or ratings (scale based).
+
+If you have data about bought/watched, you'll need to convert to a `binaryRatingMatrix`.
+
+```{r Basic_Models_Recommendations-2}
+expand.grid(user=LETTERS[1:10], product=letters) %>% 
+  mutate(purchased=rbinom(n(), 1, 0.2)) %>% 
+  spread(product, purchased) %>% 
+  `row.names<-`(.$user) %>% 
+  dplyr::select(-user) %>% 
+  as.matrix() %>% 
+  as("binaryRatingMatrix") ->
+  bin_data
+```
+
+
+If you have data about ratings, you need to convert data to a `realRatingMatrix`.
+
+```{r Basic_Models_Recommendations-3}
+expand.grid(user=LETTERS[1:10], product=letters) %>% 
+  mutate(rating=runif(n(), min=0, max=5)) %>% 
+  spread(product, rating) %>% 
+  `row.names<-`(.$user) %>% 
+  dplyr::select(-user) %>% 
+  as.matrix() %>% 
+  as("realRatingMatrix") ->
+  real_data
+```
+
+You'll sometimes get better results if you normalize your ratings data.
+```{r Basic_Models_Recommendations-4}
+real_data %>% 
+  normalize() ->
+  norm_data
+```
+
+If you have ratings data and need binary data you can transform ratings data.
+```{r Basic_Models_Recommendations-5}
+real_data %>% 
+  binarize(minRating=1)->
+  alt_bin_data
+```
+
+## Building models
+Once data is in the requisite format, we can now use the `Recommender` function to build various models.
+
+### Models for binary data
+If we have binary data, we can use some of the available algorithms.
+```{r Basic_Models_Recommendations-6}
+recommenderRegistry$get_entries(dataType="binaryRatingMatrix")
+```
+
+When we want to use one of these models, we use the `Recommender()` function. Let's use one of the built-in datasets to build some models so we get better results than our dummy data in the previous section's would yield.
+
+```{r Basic_Models_Recommendations-7}
+data(Jester5k)
+
+Jester5k %>% 
+  binarize(minRating=1) %>% 
+  Recommender("UBCF") ->
+  ubcf_bin_model
+```
+
+### Ratings data
+```{r Basic_Models_Recommendations-8}
+recommenderRegistry$get_entries(dataType="realRatingMatrix")
+```
+
+We can apply any of these models and modify the hyperparameters. Some models will normalize values before doing the core work, and it let you know if you've already done thise via the `normalize()` function.
+
+```{r Basic_Models_Recommendations-9}
+Jester5k %>% 
+  normalize() %>% 
+  Recommender("POPULAR", parameter=list(normalize=NULL)) ->
+  pop_norm_model
+
+getModel(pop_norm_model)$topN
+```
+
+## Making predictions
+Once you have a model you can make predictions using the `predict()` function for users in your system. 
+
+You can use it to get recommendations by providing a number of recommendations to get. You can further subset the recommendations, using `bestN()`.
+
+```{r Basic_Models_Recommendations-10}
+pop_norm_model %>% 
+  predict(normalize(Jester5k)[1001], n=10) %>%
+  bestN(3) %>% 
+  as("list")
+```
+
+Alternatively, you can predict ratings by using `type` not `n`.
+
+```{r Basic_Models_Recommendations-11}
+pop_norm_model %>% 
+  predict(normalize(Jester5k)[1001], type="ratings")  %>% 
+  as("matrix") 
+```
+
+This gives us the predicted ratings and excludes the ratings the user did give. If we want everything, we can provide an alternative value to `type`.
+```{r Basic_Models_Recommendations-12}
+pop_norm_model %>% 
+  predict(normalize(Jester5k)[1001], type="ratingMatrix")  %>% 
+  as("matrix") 
+```
+
+## Evaluating your model(s)
+
+So far, we've built our models using all our data, and only considered one type of model. We need to be able to test the efficacy of models and compare them so that we can use the model that most meets our needs. There will often be a training time vs accuracy trade off, for instance.
+
+### Building and evaluating a single model
+To specify our test and train samples, we use `evaluationScheme()` to build out our samples. Then the `Recommender()` and `predict()` functions will extract specific components from the resulting object. 
+
+`evaluationScheme()` allows us to perform different sampling strategies of simple train/test split, cross-validation, and bootstrapping. 
+
+As well as the method of sampling, we have to give the number of items for our test users that will be used for evaluation. Here I use use the Given-3 protocol i.e. for the test users all but three randomly selected items are withheld for evaluation.
+
+```{r Basic_Models_Recommendations-13}
+Jester5k %>% 
+  evaluationScheme("split", train=.85, given=3) ->
+  eval_split
+
+eval_split %>% 
+  getData("train") %>% 
+  Recommender("SVD") ->
+  svd_simple
+```
+
+Once we have built a model on training data, we can predict for the holdouts for users in our training data.
+```{r Basic_Models_Recommendations-14}
+eval_split %>% 
+  getData("known") %>% 
+  predict(svd_simple, ., type="ratings") %>% 
+  as("matrix") %>% 
+  head() 
+```
+
+We can then calculate accuracy and other metrics using `calcPredictionAccuracy()` to compare these value against the unknown / test data.
+
+```{r Basic_Models_Recommendations-15}
+eval_split %>% 
+  getData("known") %>% 
+  predict(svd_simple, ., type="ratings") %>% 
+  calcPredictionAccuracy(getData(eval_split, "unknown"))
+```
+
+### Building a cross-validated model
+```{r Basic_Models_Recommendations-16}
+Jester5k %>% 
+  evaluationScheme("cross-validation", k=10, given=3) ->
+  eval_cv
+```
+
+Using this object, we can construct multiple independent models.
+```{r Basic_Models_Recommendations-17}
+1:10 %>% 
+  map(~getData(eval_cv,run=.)) %>% 
+  map(Recommender, "SVD") ->
+  svd_cv_p
+
+svd_cv_p %>% 
+  map(predict, getData(eval_cv,"known"), type="ratings") 
+```
+
+Alternatively, we can use the `evaluate()` function to construct the build of the model over multiple samples.
+```{r Basic_Models_Recommendations-18}
+eval_cv %>% 
+  evaluate("SVD", type="ratings") ->
+  svd_cv_e
+```
+
+With this we can now start getting accuracy measures about how our models fit.
+
+```{r Basic_Models_Recommendations-19}
+svd_cv_e %>% 
+  getConfusionMatrix() %>% 
+  map_df(as.data.frame)
+```
+
+We can get the averaged model performance using `avg()`.
+
+```{r Basic_Models_Recommendations-20}
+svd_cv_e %>% 
+  avg()
+```
+
+We can also see the results graphically.
+
+```{r Basic_Models_Recommendations-21}
+svd_cv_e %>% 
+  plot(annotate=TRUE)
+```
+
+### Building a cross-validated binary model with multiple parameters
+
+When we build binary models things look a little different.
+
+```{r Basic_Models_Recommendations-22}
+Jester5k %>% 
+  evaluationScheme("cross-validation", k=10, given=3, goodRating=4) ->
+  eval_cv_gr
+```
+
+```{r Basic_Models_Recommendations-23}
+eval_cv_gr %>% 
+  evaluate("IBCF", type="topNList") ->
+  ibcf_cv
+```
+
+We can get confusion matrix information for each fold and hyper-parameter combination. In our case it's defaulted to different top Ns.
+```{r Basic_Models_Recommendations-24}
+ibcf_cv %>% 
+  getConfusionMatrix()
+```
+
+
+```{r Basic_Models_Recommendations-25}
+ibcf_cv %>% 
+  avg( )
+```
+
+### Building multiple models for comparison
+
+```{r Basic_Models_Recommendations-26}
+eval_cv_gr %>% 
+  evaluate(list(IBCF25=list(name="IBCF", param=list(k=25)),
+                IBCF30=list(name="IBCF", param=list(k=30)))) ->
+  ibcf_cv_mm
+```
+
+
+```{r Basic_Models_Recommendations-27}
+ibcf_cv_mm %>% 
+  avg( )
+```

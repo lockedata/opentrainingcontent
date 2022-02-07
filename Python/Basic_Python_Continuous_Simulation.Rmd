@@ -1,0 +1,236 @@
+```{r Basic_Python_Continuous_Simulation-1, include=FALSE}
+library(reticulate)
+use_python("//anaconda/bin/python")
+use_condaenv("py36")
+
+```
+# Continuous Simulations
+
+## Introduction
+
+Computer simulations are used in many disciplines including physics,
+climatology, chemistry, biology, economics, financial markets,
+psychology, social science, and engineering. Here are some of the
+benefits of using computer simulations to model systems:
+
+-   Computer simulations are often much cheaper and faster than real
+    world testing.  
+-   Sometimes the real world process you are trying to model takes too
+    long to measure in real time.
+-   You can make predictions into the future.
+-   Computer simulations are a safe way of modelling dangerous systems
+    and events.
+
+## Continuous time simulations and Python's `odeint` function
+
+Continuous Simulation is a computer model of a system that continuously
+tracks system response according to a set of equations. Continuous
+simulations are ones where the model can be examined at an infinite
+number of time instances within a given time frame.
+
+The Python library SciPy has a [built in function
+`scipy.integrate.odeint`](https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.odeint.html)
+that is useful for creating continuous simulations based on differential
+equations.
+
+One alternative to continuous simulations are 'discrete-event
+simulations'.
+
+## What are differential equations?
+
+Differential equations are equations that describe the rate of change of
+a variable e.g. the equation for velocity is a differential equation
+defining the rate of change of position in respect to time:
+
+    the time rate of change in position (i.e. velocity) = change in position / change in time 
+
+or
+
+    dx_dt =  change in x / change in t 
+
+## How do numerical differential equation solvers work?
+
+
+Many systems can be described using differential equations. However not
+all differential equations can be solved algebraically, which is where
+numerical methods (which provide an approximation) can be of use.
+
+The general idea is that if you know the value of a variable (e.g.
+position) and the rate of change of that variable (e.g. velocity) at an
+instant in time and you also have an equation that defines the rate of
+change of your variable (e.g. velocity = 5 km/h) then you can predict
+the value of the variable and its rate of change at a future time.
+
+For example if the average global temperature in the year 2000 is 15C
+and the rate of change is +0.1C/ year, then in 2001 our model would
+predict a average temperature of 15.1C.
+
+When the rate of change is not a constant value, care needs to taken to
+ensure that the gaps in time between computation are not too large. This
+is because the value of the rate of change needs to be updated regularly
+to create a stable model. The trick is to take sufficiently small time
+steps (which most solvers do automatically) and accurately define the
+rate of change of variables.
+
+##Example 1
+
+The following example is a simulation of how the population of foxes and
+rabbits varies with time. The simulation is based on the
+[Lotka-Volterra](https://en.wikipedia.org/wiki/Lotka%E2%80%93Volterra_equations)
+(aka predator-prey) equations which are often used to describe the
+interaction of two species.
+
+```{python Basic_Python_Continuous_Simulation-2, comment=NA, results = 'hold'}
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import odeint
+def dP_dt(y, t):        # y is a vector of the models variables, t is current time 
+        
+    R = y[0]            # the first item in y is the number of rabbits
+    F = y[1]            # the second item is the number of foxes 
+        
+    dR_dt = R * (1 - F) # Predator-prey equations
+    dF_dt = F * (R - 1) # Predator-prey equations
+    return [dR_dt, dF_dt]
+t = np.linspace(0,20,100) # define the time period of the simulation 
+R0 = 1.5                  # the initial population of Rabbits 
+F0 = 1.0                  # the initial population of Foxes 
+P = odeint(dP_dt, [R0, F0], t) # the SciPy function odeint solves the differential equations in dP_dt
+plt.plot(t,P[:,0], label="Rabbits")
+plt.plot(t,P[:,1], label="Foxes")
+plt.xlabel("Time (years)")
+plt.ylabel("Population (000's)")
+plt.legend()
+plt.show()
+
+```
+
+In the above example there are two variables (number of Foxes and number
+of Rabbits). The function `dP_dt` calculates the rate of
+change of these two variables (population growths) based on the current
+populations.
+
+The `SciPy` function `odeint` uses the differential equations defined
+in `dP_dt` and the initial population sizes provided by `[R0, F0]` to
+numerically solve the differential equations for the time period `t`.
+
+## How to plan a continuous simulation
+
+1.  Decide what variables you want to model.
+2.  Write equations that compute the rate of change of your variables.
+3.  Determine what the initial values (conditions) of the variables are.
+    You need to supply an initial condition per variable.
+4.  Write a function that returns the variables rate of change when
+    provided with the current time and variable values e.g. `dP_dt` in
+    Example 1.
+
+## How to construct ODE's for your model
+
+The ordinary differential equations that characterise your model can
+sometimes be difficult to define. A good starting point is to consider
+what rate of change you expect for the variables in your model e.g.
+none, constant, linear, polynomial, exponential, logarithmic. Next it is
+useful to look at differential equations already used in the field of
+your study. For example:
+
+-   Physical systems: Newtonian Physics, ideal gas laws, Newtons laws,
+    thermodynamics, laws of conservation, laws of electromagnetism
+-   Population dynamics: Malthusian model, predator-prey equations,
+    logistic function, Gompertz model
+-   Chemical Reactions: Rate equation, carbon dating
+
+Developing differential equations for your model can take time and may
+require a sharpening of your applied mathematical skills!
+
+## How to construct a continuous simulation using `odeint`
+
+1.  First of all import `odeint` into your active Python module:
+
+```{python Basic_Python_Continuous_Simulation-3, comment=NA, results = 'hold'}
+from scipy.integrate import odeint
+```
+
+2.  Next create a function (`dP_dt` in this case) that returns the
+    variables rate of change when provided with the current time and
+    variable values:
+    
+```{python Basic_Python_Continuous_Simulation-4, comment=NA, results = 'hold'}
+def dP_dt(y, t): # y is a vector of the models variables, t is current time 
+        
+    R = y[0] # the first item in y is the number of rabbits
+    F = y[1] # the second item is the number of foxes 
+        
+    dR_dt = R * (1 - F) # Predator-prey equations
+    dF_dt = F * (R - 1) # Predator-prey equations
+
+    return [dR_dt, dF_dt]
+```
+
+-   the vector `y` contains the variables that you want to model.
+-   you need to write equations that define the rate of change of each
+    item in `y`
+-   return a vector of rate of change of the variables
+
+3.  Define the simulation time period and initial conditions and pass
+    these and your differential equations to the 'odeint' function:
+    
+```{python Basic_Python_Continuous_Simulation-5, comment=NA, results = 'hold'}
+t = np.linspace(0,20,100) # define the time period of the simulation 
+R0 = 1.5  # the initial population of Rabbits 
+F0 = 1.0  # the initial population of Foxes 
+
+P = odeint(dP_dt, [R0, F0], t) # the SciPy function odeint solves my differential equations 
+
+```
+
+
+-   `odeint` will provide values of the simulation variables at each
+    time listed in 't'.
+-   The initial conditions of a simulation are very important. Play
+    around with the values of `[R0, F0]` in the example above to see how
+    they can make the simulation unstable and/ or unusable. Care should
+    be taken when setting the initial conditions to make them as
+    reasonable as possible.
+-   Call `odeint` and pass it `dP_dt`, the initial conditions of your
+    variables and the time `t` to run the simulation for. The order of
+    the initial conditions must correspond to the order of the items in
+    the vector returned by `dP_dt`; i.e. in this example Rabbit info
+    followed by Fox info!
+
+### Exercise 1
+
+Create a model using `odeint` to simulate a ball being dropped out of a
+hot air balloon. At time = 0, the position and velocity of the ball are 0. 
+Use acceleration due to gravity = 9.8 m/s^2 and run the simulation
+for 10 seconds. The two simultaneous equations to use are:
+
+1.  dposition\_dtime = velocity
+2.  dvelocity\_dtime = 9.8
+
+Plot the results. What are the speed and position of the ball after 10
+seconds?
+
+### Solution to Exercise 1:
+
+```{python Basic_Python_Continuous_Simulation-6, comment=NA, results = 'hold'}
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import odeint
+def dP_dt(y, t):
+        
+    pos = y[0]
+    vel = y[1]
+            
+    dpos_dt = vel
+    dvel_dt = -9.8 
+    return [dpos_dt, dvel_dt]
+t = np.linspace(0,10,100)
+solution = odeint(dP_dt, [0,0], t)
+fig1,ax = plt.subplots(1)
+plt.plot(t,solution[:,0],label="Position")
+plt.plot(t,solution[:,1],label="Velocity")
+plt.xlabel("Time (s)")
+plt.legend()
+plt.show()
+
+```

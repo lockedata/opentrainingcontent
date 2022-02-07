@@ -1,0 +1,62 @@
+# Decision trees
+
+## Decision trees
+Purpose: predict a discrete outcome
+
+
+```{r Basic_Models_DecisionTrees-1, echo=FALSE}
+titanic %>% 
+  FFTrees(survived ~., data=.) %>% 
+  plot(main = "Titanic", 
+     decision.names = c("Died", "Survived"))
+```
+
+## Function 
+Therer are number of decision tree R packages, here I use FFTrees for the superior visualisations.
+
+```{r Basic_Models_DecisionTrees-2}
+titanic %>% 
+  FFTrees(survived ~., .)
+```
+
+## Getting an overview
+
+```{r Basic_Models_DecisionTrees-3}
+titanic %>% 
+  FFTrees(survived ~., .) %>% 
+  summary()
+```
+
+## Getting a visual overview
+
+```{r Basic_Models_DecisionTrees-4}
+titanic %>% 
+  FFTrees(survived ~., .) %>% 
+  plot()
+```
+
+
+## Getting variable importance
+
+```{r Basic_Models_DecisionTrees-5}
+titanic %>% 
+  FFTrees(survived ~., .) %>% 
+  plot(what="cues")
+```
+
+## Making predictions
+
+```{r Basic_Models_DecisionTrees-6}
+titanic %>% 
+  sample_n(10) ->
+  testdf
+
+titanic %>% 
+  FFTrees(survived ~., .) %>% 
+  predict(.,data=testdf) %>% 
+  plot()
+```
+
+## Exercises
+1. Build a decision tree for predicting the `y` column in the `bank` dataset
+2. What are the most important factors in this tree?

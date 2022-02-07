@@ -1,0 +1,339 @@
+
+# Logistic regressions {#basics}
+
+A *linear regression* predicts a continuous variable based on multiple independent variables. 
+
+![](GE1.png)
+
+If we were trying to predict a continuous variable:
+
+```{r rnorm, fig.cap="Continuous outcome variable"}
+library(ggplot2)
+set.seed(777)
+y_n<-rnorm(1000,100,25)
+qplot(y_n, binwidth=5)+theme_minimal()
+```
+
+A basic regression using a single variable could look like:
+```{r xyc, fig.cap="Simple line of best fit"}
+x_n<-y_n+rnorm(1000,30,20)
+qplot(x_n,y_n) + geom_smooth(method = "lm", se = FALSE)+theme_minimal()
+```
+
+
+A *logistic regression* is a modified regression model that can work on categorical or binomial outcomes.
+```{r rbinom, fig.cap="Binomial outcome variable"}
+y_b<-rbinom(1000,size = 1, prob = .89)
+qplot(y_b, binwidth=.5)
+```
+
+Applying a linear regression to this data looks rather strange:
+
+```{r xy, fig.cap="Trying to apply a line of best fit"}
+x_b<-y_b+rnorm(1000)
+qplot(x_b,y_b) + geom_smooth(method = "lm", se = FALSE)+theme_minimal()
+```
+
+## Categorical outcomes
+When an outcome is continuous it makes sense to be able to get a prediction that can be in the range `$[-\infty,+\infty]$`. For an outcome that is one thing or the other (or another in a multi-class scenario), it doesn't make sense to have a continuous range of values.
+
+Imagine trying to predict whether someone will be alive (1) or dead (0) at the age of 60. 
+
+To get a prediction that they are 110% alive, 50% alive^[Cats in boxes not withstanding], or even -10% alive doesn't make sense. If we simply did a linear regression, this is the sorts of of outcomes we'd get.
+
+We need to instead find a way of getting our values onto the range `$[-\infty,+\infty]$`.
+
+## Moving from categorical to continuous
+### Probability
+A first step could be probabilities, which allow a continuous range between `$[0,1]$`. If we got a probability, we could say anything below 50% probability is a 0 and anything above a 1:
+```{r probs, fig.cap="Probability range, where dashed line indicates 50% probability cutoff"}
+prob_y<-seq(0,1, by=.001)[-1]
+qplot(y_b,prob_y)+theme_minimal()+geom_hline(aes(yintercept=.5), linetype="dashed", colour="red")
+```
+
+This allows for a continuous result, but like with our original binomial variable it wouldn't make sense to give a negative probability or a probability greater than 1.
+
+
+### Odds
+The odds of something happening are the probability of it happening versus the probability of it not happening.
+`\begin{equation}
+\frac{p}{1-p}
+\end{equation}`
+
+As probability can never be less than 0 or greater than 1, we get a range between `$[0,+\infty]$`: 
+
+```{r oddsdist, fig.cap="Odds distribution"}
+odds_y<- prob_y/(1-prob_y)
+qplot(prob_y, odds_y)+theme_minimal()
+```
+
+When we look at this against our binomial outcome, we can see values that range from 0.
+
+```{r odds, fig.cap="Odds range, where dashed line indicates 50% probability cutoff"}
+qplot(y_b,odds_y)+theme_minimal()+geom_hline(aes(yintercept=1), linetype="dashed", colour="red")
+```
+
+
+### Logit
+The final bit of wizardry we can do to get a predicted value that sits in the range `$[-\infty,+\infty]$` is take the log of the odds. This is known as the *logit*:
+
+
+```{r logitdist, fig.cap="Logit distribution"}
+logit<-log(odds_y)
+qplot(prob_y, logit)+theme_minimal()
+```
+
+```{r logodds, fig.cap="Logit range, where dashed line indicates 50% probability cutoff"}
+qplot(y_b, logit)+theme_minimal()+ geom_hline(aes(yintercept=0), linetype="dashed", colour="red")
+```
+
+![](GE2.png)
+
+## Binomial outcome
+So when need to predict a binomial outcome, we instead predict the logit. 
+
+To do simple classification, set a cutoff point (typically 50% probability) and assign logits smaller than the cutoff to the negative class, and larger logits to the positive class.
+
+```{r 02_MOD16-1, echo=FALSE}
+df<-data.frame(
+  row.names = c(
+    "Logit <= 0", 
+    "Logit > 0"
+   ), 
+   `Outcome is 0`=c(
+      "Correct", 
+      "Incorrect"
+   ), 
+   `Outcome is 1`=c(
+      "Incorrect",
+      "Correct"
+   )
+)
+knitr::kable(df)
+```
+
+## Probability outcome
+If we wanted the probability of the positive class happening, we can transform the logit to a probability:
+
+
+```{r logittransform}
+library(optiRum)
+
+logits     <- -4:4
+odds       <- logit.odd(logits)
+probs      <- odd.prob(odds)
+pred_class <- logits>=0
+
+knitr::kable(data.frame(logits,odds,probs,pred_class))
+```
+
+```{r logittoprob}
+logit.prob
+logit.odd
+odd.prob
+```
+
+
+
+# Logistic regressions in R
+To perform a logistic regression in R, we use the `glm` function.
+
+```{r glm}
+glm(vs~ mpg , data=mtcars, family = binomial)
+```
+
+## The `glm` function
+The `glm` function is a general function for performing linear regressions. It allows us to specify the type of transformation the outcome variable should undergo, in order for us to be able to perform a linear regression against it.
+
+When we want to use `glm` for a logistic regression with two outcomes, we give it the parameter `family`.
+
+### Formula
+R uses a formula system for specifying a model:
+
+- You put the outcome variable on the left
+- A tilde (`~`) is used for saying "predicted by"
+- Exclude an intercept term by adding `-1` to your formula
+- You can use a `.` to predict by all other variables e.g. `y ~ .`
+- Use a `+` to provide multiple independent variables e.g. `y ~ a + b`
+- You can use a `:` to use the interaction of two variables e.g. `y ~ a:b`
+- You can use a `*` to use two variables and their interaction e.g. `y ~ a*b`^[equivalent to `y ~ a + b + a:b`]
+- You can construct features on the fly e.g. `y ~ log(x)` or use `I()` when adding values e.g. `y ~ I(a+b)`
+
+For more info, check out `?formula`.
+
+### Useful parameters
+- `na.action` can be set to amend the handling of missings in the data
+- `model`,`x`,`y` controls whether you get extra info about the model and data back. Setting these to `FALSE` saves space
+
+
+## Exercise
+1. Load the package `AppliedPredictiveModeling`
+1. Load the dataset `AlzheimerDisease`
+1. Create a subset of the predictors that begin with IL
+    - Use `grep("^IL", colnames(predictors))`
+1. Write a logistic regression for predicting Alzheimers using the subset
+
+```{r 02_MOD16-2, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+library(AppliedPredictiveModeling)
+data(AlzheimerDisease)
+subsetPredictors<-predictors[,grep("^IL", colnames(predictors))]
+glm(diagnosis ~ . , data=subsetPredictors, family = binomial)
+```
+
+### Coefficients
+Each variable is assigned a coefficient that says how much the logit is impacted per unit of the variable. 
+
+- In the case of a continuous variable that has been scaled, that means a movement of one standard deviation. For a factor, that is the presence of the specific value
+- If the value is positive, it increases the likelihood of the positive outcome. If it is negative, it reduces the probability of the positive outcome
+- Small values have little impact (if variables are properly scaled) to the overall probability
+
+## Functions working with `glm`
+
+```{r 02_MOD16-3, echo=FALSE}
+df<-data.frame(Function=c("coefficients","summary","fitted", "predict",  "plot", "residuals" ),
+  Purpose=c(
+    "Extract coefficients", 
+    "Output a basic summary", 
+    "Return the predicted values for the training data", 
+    "Predict some values for new data",
+    "Produce some basic diagnostic plots", 
+    "Return the errors on predicted values for the training data"
+   )
+)
+knitr::kable(df)
+```
+
+## Exercise
+1. What are the coefficients of your model?
+
+
+```{r 02_MOD16-4, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+mymodel<- glm(diagnosis ~ . , data=subsetPredictors, family = binomial)
+coefficients(mymodel)
+```
+
+## Acceptable inputs
+A logistic regression will accept numeric and categorical variables.
+
+### Numeric variables
+Numeric variables should be scaled to improve fitting, when variables are over different scales e.g. age and income.
+
+### Categorical variables
+By default, our logistic regression model produces **dummy variables** from our categorical variables. These capture all the different values for a variable, using $n-1$ columns. 
+
+The first level in the factor is used as the default for fitting a model, and then all other options produce what is basically an adjustment to the intercept. It is good practice to set your most common value for a variable as the first level so that the model highlights differences.
+
+```{r 02_MOD16-5}
+table(predictors$Genotype)
+glm(diagnosis ~ age + Genotype -1, data = predictors, family = binomial)
+```
+
+![](GE3.png)
+
+## Logistic regression predictions
+Use the `predict()` function to use a model to score new data. If you scaled variables in the development process of the model, you need to transform the variables before you can run the prediction.
+
+```{r 02_MOD16-6}
+model<-glm(diagnosis[-1] ~ age + Genotype -1, data = predictors[-1,], family = binomial)
+predict(model,predictors[1,])
+```
+
+You can extract, using `predict()`:
+
+- `"link"` is the logit (the default return)
+- `"response"` is the probability
+- `"terms"` is the logit components
+
+## Exercise
+1. Take a random sample of 20% of your data
+2. Use this to get some predictions from your model
+
+# Evaluating logistic regressions
+
+Typically you would perform most evaluation criteria on the training and test samples. Typically the accuracy goes does a bit on test samples. If it goes down substantially, you've probably overfit your model and need to use fewer columns or adjust your samplign strategy.
+
+## Confusion matrix
+The confusion matrix looks at the classification result of a logistic regression versus the actual results.
+
+- **True negatives** are values where we correctly predicted the negative case
+- **True positives** are values where we correctly predicted the positive case
+- **False negatives** are values we incorrectly classified as negative but were in fact positive values
+- **False positives** are values we incorrectly classified as positive but were in fact negative values
+
+
+
+```{r 02_MOD16-7}
+library(caret)
+confusionMatrix(ifelse(fitted(model,type="response")>.5,
+                       "Control","Impaired"), 
+                diagnosis[-1])
+```
+
+In addition, we can derive some metrics that are useful for looking at our model:
+
+- **Sensitivity** is the true positives divided by the true positives and false negatives i.e. what percentage of positives does it correctly classify
+- **Specificity** is the true negatives divided by the true negatives and false negatives i.e. what percentage of negatives does it correctly classify
+- **Precision** is the true positives divided by the true and false positives i.e. what percentage of values classified as positive are correct
+- **Recall** is a synonym for sensitivity
+<!--
+### Hosmer-Lemeshow Test
+Use this to check whether the model performs consistently across the scores from bad to good. Areas where performance is substantially lower than others, reduces the score. The score is partially dependent on the number of ranking segments you use. Bigger scores are better.
+
+```{r 02_MOD16-8}
+library(ResourceSelection)
+hoslem.test(x= model$y, 
+            y= fitted(model),
+            g= 5)
+```
+-->
+
+## Gini coefficients
+We can use a Receiver Operating Curve (**ROC**) graph to get measures of discriminatory power. A ROC chart ranks each point by predicted score and calculates the cumulative true positive (*Sensitivity*) and false positive (*1- Specificity*) rates and plots these. 
+
+In a ideal world, the model would get 100% of the positives correctly classified, without incorrectly classifying anything. 
+
+In a random world, the model gets as many right as it gets wrong. The diagonal line on the chart, represents that scenario.
+
+Each model is usually somewhere between these two cases. The area under the ROC curve but above the Random line can be used to calculate the **Area Under the Curve (AUC)**. This is then transformed into the **Gini coefficient** to present a percentage level of discriminatory power.
+
+This can be used across models for the same data, and the higher the better. You should usually see the gini coefficient go down when producing a chart for the test data.
+
+```{r 02_MOD16-9}
+library(AUC)
+rocRes<-roc(fitted(model),diagnosis[-1])
+plot(rocRes)
+```
+
+
+```{r 02_MOD16-10}
+library(optiRum)
+giniChart(fitted(model),diagnosis[-1])
+```
+
+## Lift charts
+These show how well a model ranks samples such that we're X-times better off than randomly selecting values along the ranked results. 1 is "random" so the higher the better.
+
+```{r 02_MOD16-11}
+xyplot(caret::lift(diagnosis[-1]~fitted(model)), plot="lift")
+```
+
+## Comparing multiple models
+As well as comparing values and/or curves from the standalone methods, we can perform a Likelihood Ratio Test to determine whether a more complex model is a better fit than the simpler one.
+
+This method splits up the data into buckets based on the predicted value and comapres the difference in log-likelihoods with the Chi-squared distribution.
+
+The lower the score, the better. Typically, if the score is <0.05 then we're confident that the additional model complexity is worth while.
+
+```{r 02_MOD16-12}
+library(lmtest)
+
+modelA<-glm(diagnosis[-1] ~ age + Genotype , data = predictors[-1,], family = binomial)
+
+modelB<-glm(diagnosis[-1] ~ age + Genotype+ male, data = predictors[-1,], family = binomial)
+
+lrtest(modelA, modelB)
+```
+
+## Exercise
+1. Evaluate your model with some of the techniques above
+1. Is your model OK?

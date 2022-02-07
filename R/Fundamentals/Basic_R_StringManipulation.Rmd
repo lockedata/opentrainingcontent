@@ -1,0 +1,135 @@
+
+```{r Basic_R_StringManipulation-1, include=FALSE, message=FALSE}
+library(dplyr)
+```
+
+# General string tasks
+## stringr
+- All string manipulation functions prefixed with "str_".
+- Takes the input string first (in contrast to base functions)
+
+```{r Basic_R_StringManipulation-2, results='hide'}
+library(stringr)
+```
+
+## Common tasks
+
+```{r Basic_R_StringManipulation-3}
+simple<-"This IS HOrrib1y typed! "
+numbers<-c("02","11","10","1")
+str_to_lower(simple)
+str_trim(simple)
+str_sort(numbers, numeric=TRUE)
+str_length(numbers)
+```
+
+## Splitting
+```{r Basic_R_StringManipulation-4}
+str_split(simple,boundary("word"))
+str_split(simple,boundary("sentence"))
+str_split(simple,"i")
+```
+
+## Extraction
+```{r Basic_R_StringManipulation-5}
+str_detect(simple,"typed")
+str_extract(simple,"typed.*")
+```
+
+## Counts
+```{r Basic_R_StringManipulation-6}
+str_count(simple, "i|I")
+```
+
+## Exercises
+1. Store "the quick brown fox jumps over the lazy dog"
+2. Upper case the string
+3. Split the sentence into words and count the number of letters in each word
+
+# Working with factors
+## forcats
+- All functions related to factors prefixed with "fct_"
+
+```{r Basic_R_StringManipulation-7, results='hide'}
+library(forcats)
+```
+
+## Common tasks
+```{r Basic_R_StringManipulation-8}
+myFactor<-as.factor(c("red","blue","yellow",NA,"red"))
+fct_count(myFactor)
+```
+
+## Common tasks
+```{r Basic_R_StringManipulation-9}
+fct_explicit_na(myFactor) %>% 
+  fct_count()
+```
+
+## Common tasks
+```{r Basic_R_StringManipulation-10}
+fct_infreq(myFactor) %>% 
+  fct_count()
+```
+
+## Common tasks
+
+```{r Basic_R_StringManipulation-11}
+fct_lump(myFactor,n = 1) %>% 
+  fct_count()
+```
+
+## Regulatory / security 
+```{r Basic_R_StringManipulation-12}
+fct_anon(myFactor) %>% 
+  fct_count()
+```
+
+## Exercise
+1. Count the records in the `gss_cat` dataset by survey year
+1. Revise `gss_cat` such that there are only three levels of marital status
+1. Race, partyid, & religion are sensitive values, anonymise them data
+
+# String interpolation
+
+## glue
+- Clean dynamic string creation
+
+```{r Basic_R_StringManipulation-13, results='hide'}
+library(glue)
+```
+
+## Simple
+```{r Basic_R_StringManipulation-14}
+glue("string1", "string2", .sep=" ")
+
+string2<-"was hard coded"
+glue("string1 {string2}")
+```
+
+## More complicated
+```{r Basic_R_StringManipulation-15}
+glue("I went to the shop and I bought a {day1}",
+     " and a {day2}",
+     day1="ham", day2="cupcake")
+
+glue("I purchased everything for £{round(cost, 2)}",
+     cost=4/3)
+```
+
+## Complicated
+```{r Basic_R_StringManipulation-16}
+iris %>% 
+  group_by(Species) %>% 
+  glue_data("The average sepal width for {Species} is", 
+            " {round(mean(Sepal.Width),1)}cm which is",
+            " {round(mean(Sepal.Width),1)-Sepal.Width}cm bigger",
+            " than this {Species}'s sepal width") ->
+  results
+
+results[sample(1:150, 5)]
+```
+
+## Exercise
+1. Produce a statement that tells us what today's date is
+2. Work out the average values for each species in iris and produce a sentence providing these values for each species

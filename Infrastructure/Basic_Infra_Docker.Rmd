@@ -1,0 +1,120 @@
+# (PART) Docker Fundamentals {-}
+# Docker
+
+> A container is a standard unit of software that packages up code and all its dependencies so the application runs quickly and reliably from one computing environment to another. A Docker container image is a lightweight, standalone, executable package of software that includes everything needed to run an application: code, runtime, system tools, system libraries and settings.
+
+![Why Docker](img/why-containers.jpg)
+
+Docker containers enable us to script our infrastructure and application dependencies making things highly reproducible. The ease of rebuilding container images and the speed at which containers spin up means that new versions of container images can be built whenever regularly and deployed with ease - meaning no patching!
+
+As containers bundle our code into a container image, management of many different container images containing different types of code, different operating systems, and different workloads no longer a huge headache for Ops staff. Management for Ops is of the fabric hosting all the containers and the performance and inherent stability of the container image itself is Devs responsibility.
+
+## Images
+Before you can run a container, you need an image to use -- this could be one made locally or one pulled from an online registry of images e.g. hub.docker.com
+
+```bash
+docker pull ubuntu
+```
+
+Once you have an image available locally, you can then run a container instance.
+
+## Running containers
+Containers can be run via the docker command line or through other SDKs. 
+
+```bash
+docker run -it ubuntu /bin/bash
+```
+
+There are many flags that can be added to configure the container, here are a few.
+
+```bash
+docker run --help
+##Usage:  docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
+##
+##Run a command in a new container
+##
+##Options:
+##  -a, --attach list                    Attach to STDIN, STDOUT or STDERR
+##      --cpus decimal                   Number of CPUs
+##  -d, --detach                         Run container in background and
+##                                       print container ID
+##  -e, --env list                       Set environment variables
+##      --env-file list                  Read in a file of environment 
+##                                       variables
+##      --help                           Print usage
+##  -h, --hostname string                Container host name
+##  -i, --interactive                    Keep STDIN open even if not attached
+##  -m, --memory bytes                   Memory limit
+##      --name string                    Assign a name to the container
+##  -p, --publish list                   Publish a container's port(s) to
+##                                       the host
+##      --restart string                 Restart policy to apply when a
+##                                       container exits (default "no")
+##      --rm                             Automatically remove the container
+##                                       when it exits
+##  -t, --tty                            Allocate a pseudo-TTY
+##  -v, --volume list                    Bind mount a volume
+```
+
+We can see what containers we have running with `docker ps -a`. The `-a` includes containers that are in a stopped date. Containers can be stopped with `docker stop [name/id]` and destroyed with `docker rm [name/id]`. 
+
+## Developing containers
+Container images are built from a Dockerfile or from taking an image of a currently running container. It is best practice to script the container in a Dockerfile rather than handmake an image.
+ 
+```
+FROM rocker/tidyverse
+MAINTAINER Steph Locke <steph@itsalocke.com>
+RUN git clone https://github.com/lockedata/DOCKER-introR.git  && \
+    cd DOCKER-introR/  && \
+	cp sampleSQL.r /etc/skel/  && \
+    apt-get install -y libjpeg-dev apt-transport-https gnupg && \
+    chmod 777 ./mkusers.sh  && \
+    ./mkusers.sh  && \
+    chmod 777 ./odbcinstall.sh  && \
+    ./odbcinstall.sh && \
+    R -e 'devtools::install_github("lockedata/DOCKER-introR")' 
+```
+
+Dockerfiles can contain a number of commands. The most important being the `FROM` which tells us what (if any) existing image to build upon. In the above example, we're relying on the latest tidyverse image which inherits from an rstudio image which inherits from an r-ver which inherits debian. Each image adds its own specific set of instructions to the previous image.
+
+
+You can develop a Dockerfile locally and use the `docker build` command to compile it locally. There are [best practices](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/) that you will want to read about as you develop your own images later.
+
+>Running Docker for Windows?
+> Find your containers IP: docker inspect <container name>| grep "IPAddress“
+> IP not found? route /P add 172.0.0.0 MASK 255.0.0.0 10.0.75.2
+
+## Exercises
+1. [Deploy a container](https://www.katacoda.com/courses/docker/deploying-first-container)
+2. [Build and deploy a container](https://www.katacoda.com/courses/docker/2)
+3. Start learning about data persistence using [volumes](https://www.katacoda.com/courses/docker/persisting-data-using-volumes) and [data containers](https://www.katacoda.com/courses/docker/data-containers).
+
+
+
+# Kubernetes
+> Kubernetes (K8s) is an open-source system for automating deployment, scaling, and management of containerized applications.
+
+K8s is designed to improve how you host Dockerised applications. It aims to make the following easier:
+
+- service discovery 
+- load balancing
+- container resource balancing
+- storage orchestration
+- self-healing containers
+- automated rollouts and rollbacks
+- secret and configuration management
+- batch execution
+- scaling applications out
+
+![K8s architecture](img/Chart_02_Kubernetes-Architecture.png)
+
+- Pod a collection of one or more containers that are logically grouped
+- Replica sets as predefined sets of live pods
+- etcd is the management database for K8s
+
+Check out the [glossary](https://kubernetes.io/docs/reference/glossary/?fundamental=true)
+
+## Exercises
+1. [Launch a single node cluster](https://www.katacoda.com/courses/kubernetes/launch-single-node-cluster)
+2. [Use kubectl, the k8s command line, to run containers](https://www.katacoda.com/courses/kubernetes/kubectl-run-containers)
+3. [Create yaml deployment files for k8s](https://www.katacoda.com/courses/kubernetes/creating-kubernetes-yaml-definitions)

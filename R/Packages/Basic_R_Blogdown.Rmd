@@ -1,0 +1,29 @@
+# (PART) Working with Hugo as an R user {-} 
+# {blogdown}
+
+The [{blogdown}](https://bookdown.org/yihui/blogdown) package was developed to support R users in using Hugo in combination with {rmarkdown}. As well as helper functions to produce new files, insert images etc, it has a wrapper around the Hugo executable so that you can run Hugo, either in the local serve mode, or to generate content.
+
+> An integral part of the {blogdown} ethos is to use {rmarkdown} and *render* to HTML directly rather than to output markdown files to let Hugo manage the render. This means that when you make changes to the theme you have to re-render all .Rmd files to HTML which can be very painful if you have written content with different R versions, packages, and system dependencies. As such, it's the authors opinion that whilst blogdown can support an R user during *authoring* for some utility functions, it is not compatible with a long term workflow or CI/CD. The next section, looks at the [{hugodown}](https://github.com/r-lib/hugodown) package and how this might overcome the workflow issue.
+
+## Using {blogdown} to manage Hugo
+{blogdown} has built-in functionality to support the use of Hugo from R. 
+
+```r
+install.packages('blogdown') 
+blogdown::install_hugo()
+```
+
+> We recommend setting the `blogdown.hugo.dir` global option to a location on your machine that can be used outside RStudio so Hugo is available on the command-line etc if you use {blogdown} to install it. `options(blogdown.hugo.dir = '~/hugo/')`
+
+You can also run update commands to get the latest version of Hugo. This is pretty important as there are significant releases monthly, plus the occassional minor fix release throughout the month.
+
+```r
+blogdown::update_hugo()
+```
+
+## Using {blogdown} to support content creation
+{blogdown} come with a number of add-ins designed to make writing new content files easier.
+
+The add-in *New Post* (backed `by blogdown::new_post()`) gives a graphical interface to creating a new post and is heavily optimised towards a blog post set of metadata.^[Note this functionality is also present in the Netlify CMS however the netlify CMS is configurable. It does not however, support the rendering of .Rmd into .md so there's a benefit to a local workflow if you need to perform a conversion.]
+
+The other key add-in is the *Insert Image* add-in that supports "upload" of images into the project and adds the correct location reference for it, which helps users who are not used to working with relative file paths, particularly in the context of the way Hugo converts the project file system to the outputs.

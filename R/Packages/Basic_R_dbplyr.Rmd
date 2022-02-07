@@ -1,0 +1,113 @@
+
+# dbplyr
+
+dbplyr allows us to open connections to database objects, write dplyr and have the database execute the SQL equivalent.
+
+- `dbplyr` required
+- `dplyr` required
+- `DBI` required
+- `odbc` recommended
+- Full `tidyverse` recommended
+- A database required
+
+## Basics
+
+```{r Basic_R_dbplyr-1}
+library(DBI)
+library(odbc)
+
+driver   = "ODBC Driver 17 for SQL Server"
+server = "lockedata.database.windows.net"
+database = "datasci"
+uid = "lockedata"
+pwd = "zll+.?=g8JA11111"
+
+dbConn<-dbConnect(odbc(),
+          driver=driver, server=server,
+          database=database, uid=uid,
+          pwd=pwd)
+```
+
+
+With a database connection we can build connections to individual tables using `tbl()`.
+
+```{r Basic_R_dbplyr-2}
+library(tidyverse)
+library(dbplyr)
+
+if(!("flights" %in% dbListTables(dbConn))){
+copy_to(dbConn, nycflights13::flights, "flights",
+  temporary = FALSE, 
+  indexes = list(
+    c("year", "month", "day"), 
+    "carrier", 
+    "tailnum",
+    "dest"
+  )
+)
+}
+
+flights<-tbl(dbConn,"flights")
+```
+
+With these table references as our starting points, we can then write queries against them like they were in-memory R data.frames. These get translated in to SQL, if possible, and executed against the database, saving computation and memory headaches on the R side.
+
+```{r Basic_R_dbplyr-3}
+flights %>% 
+  filter(Month==1) %>% 
+  summarise(n())
+```
+
+By default, R preps things until you force it to execute the code against the DB by displaying the results. Sometimes you need to force a collection of the data by using `collect()` so that you can use functionality that only works on data.frames, like `ggplot()`.
+
+
+```{r Basic_R_dbplyr-4}
+flights %>% 
+  filter(Month==2) %>% 
+  summarise(n()) %>% 
+  collect()->
+  feb_count
+
+feb_count
+```
+
+## Debugging
+Not every R function or transformation is compatible with your database so you will sometimes get errors that mean you will need to change your code -- either by changing the R functions used, or by collecting data first. 
+
+I would also not recommend you run dbplyr code as part of a production data pipeline. It will not generate code as optimised as a DBA who knows the DB could write it so it should be used for formalising requirements or ad-hoc work.
+
+To get the SQL for debugging or for optimisation, you can use `show_query()`.
+
+```{r Basic_R_dbplyr-5}
+flights %>% 
+  filter(Month==1) %>% 
+  summarise(n()) %>% 
+  show_query()
+```
+
+## Joins
+If you have multiple table connections within a database, you can write joins between the tables and have this translate to SQL that will execute in the database.
+
+```{r Basic_R_dbplyr-6}
+if(!("flights_carriers" %in% dbListTables(dbConn))){
+  nycflights13::flights %>% 
+    count(carrier) %>% 
+    slice(1:10) %>% 
+    copy_to(dbConn, ., "flights_carriers", 
+  temporary = FALSE)
+}
+
+carriers<-tbl(dbConn, "flights_carriers")
+
+flights %>% 
+  inner_join(carriers, by=c("carrier"="carrier")) %>% 
+  show_query()
+```
+
+## Exercise
+1. Find the average departure delay (assume NAs are 0 delay) by destination from the flights table
+2. Find the count of flights with carriers not in the flights_carriers table
+
+## Next steps
+1. Read about how dplyr gets mapped to SQL at [dbplyr.tidyverse.org](http://dbplyr.tidyverse.org)
+2. Extend the [MSSQL conversions](https://github.com/tidyverse/dbplyr/blob/master/R/db-odbc-mssql.R)

@@ -1,0 +1,33 @@
+# shinyloadtest
+
+We can load test shiny using [`shinyloadtest` and `shinycannon`](https://rstudio.github.io/shinyloadtest/).
+
+`shinyloadtest` is an R package used to generate recordings and analyze results. `shinycannon` is a replay tool for the recordings developed in `shinyloadtest`.
+
+```r
+remotes::install_github("rstudio/shinyloadtest")
+```
+
+
+- **Benchmark:** Use `shinyloadtest::record_session()` to record interaction, `shinycannon` to simulate users
+- **Analyze:** Visualize and interpret the metrics
+- **Recommend:** Propose ways for the capacity of the application to be increased
+- **Optimize:** Implement recommendations and benchmark again
+
+
+Check out [Kelly O'Briant's app](https://github.com/kellobri/spc-app) from her recent Shiny in Production training and it's load testing code.
+
+
+**References and Resources:**
+
+**Webinar:**
+
+- [Load testing Shiny by Alan Dipert](https://resources.rstudio.com/webinars/load-testing-shiny-alan-dipert)
+- [Webinar Slides](https://github.com/rstudio/webinars/blob/master/63-shinyloadtest/slides.pdf)
+
+**Vignettes:**
+
+- [Analyzing Load Test Logs](https://rstudio.github.io/shinyloadtest/articles/analyzing-load-test-logs.html)
+- [Case Study: Scaling an Application](https://rstudio.github.io/shinyloadtest/articles/case-study-scaling.html)
+- [Limitations of `shinyloadtest`](https://rstudio.github.io/shinyloadtest/articles/limitations-of-shinyloadtest.html)
+- [Load Testing Authenticated Apps](https://rstudio.github.io/shinyloadtest/articles/load-testing-authenticated-apps.html)

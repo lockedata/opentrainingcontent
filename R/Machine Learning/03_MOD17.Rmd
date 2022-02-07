@@ -1,0 +1,321 @@
+# Preparing Data for modeling
+## Initial exploration
+You should explore your data to look for issues and get a general understanding of the data.
+
+```{r 03_MOD17-1}
+library(caret)
+library(AppliedPredictiveModeling)
+data(AlzheimerDisease)
+subsetPredictors<-predictors[,grep("^IL", colnames(predictors))]
+knitr::kable(t(summary(subsetPredictors)))
+featurePlot(subsetPredictors, diagnosis)
+pairs(subsetPredictors[,1:5])
+```
+
+Common things to explore/check for:
+
+- Unusual distributions
+- Outliers
+- Missings
+- Correlations
+
+At this point, much of this is for information only or for identifying data quality issues that need further investigation. A handy package for writing data quality assertions about the data is the `assertive` package.
+
+### Exercise
+1. Load the `PASWR` package
+2. Load the `titanic3` data
+3. Summarise the data 
+4. Between the data dictionary and the summary, what column should we remove from our potential predictor variables?
+
+```{r 03_MOD17-2, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+library(PASWR)
+data(titanic3)
+knitr::kable(t(summary(titanic3)))
+# body should definitely be removed
+titanic3$body<-NULL
+```
+
+## Split data
+The data needs to be split into training and testing samples. **Training** gets used to build our model and **testing** is used to evaluate how good the model is.
+
+Building models on all your data **overfits** and tends not to apply well to new data. Similarly, using all variables in your model will often result in overfitting.
+
+We can split the data using the `sample` function to generate a list of rows, however, I prefer to use `caret`'s `createDataPartition` function as this tries to maintain the **class balance** in the training data.
+
+```{r 03_MOD17-3, message=FALSE, warning=FALSE}
+library(caret)
+set.seed(77887)
+trainRows<-createDataPartition(diagnosis, p=.7 , list=FALSE)
+
+training_x<-subsetPredictors[trainRows,]
+training_y<-diagnosis[trainRows]
+
+testing_x<-subsetPredictors[-trainRows,]
+testing_y<-diagnosis[-trainRows]
+```
+
+### Exercise
+1. Create a training sample of 70% of the data
+    - use random seed of 8787
+2. Split out the `titanic3` data:
+    - `train_x` holding predictive variables with rows from our training sample
+    - `train_y` holding the outcome variable with rows from our training sample
+    - `test_x` holding predictive variables with rows not in our training sample
+    - `test_y` holding the outcome variable with rows not in our training sample
+    
+```{r 03_MOD17-4, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+set.seed(8787)
+trainRows<-createDataPartition(titanic3$survived, p=.7 , list=FALSE)
+
+train_x<-titanic3[trainRows,-2]
+train_y<-titanic3[trainRows, 2]
+
+test_x<-titanic3[-trainRows,-2]
+test_y<-titanic3[-trainRows,2]
+```
+
+### Why split data before we do much with the data?
+Before we look at scaling variables, we should split our data. This is to avoid information from our test sample being encoded in our training sample. 
+
+For instance, if we scale a variable via it's z-score (more on this later) then we need a mean and standard deviation. Using the mean and standard deviation of all your data includes values from your test data, which mean syour model will be incorporating information from your test observations in the model. This increases, even if only a bit, the level of overfitting on your test data.
+
+## Scale numeric variables
+Some models do not need variables to be scaled. Logistic regressions are not one of them!
+
+What we mean by **scaled** is transforming each numeric variable so that it is in a similar range. Common scaling methods are:
+
+- **minmax** Express numbers as a percentage of the maximum after subtracting the minimum. This results in range $[0,1]$ for training data but can result in a different range in test data and, therefore, production!
+\begin{equation}
+\frac{x - min(x)}{max(x) - min(x)}
+\end{equation}
+- **z-score** Express numbers as the distance from the mean in standard deviations. This results in a range that's notionally $[-\infty,+\infty]$ and results will be in the same range in test data.
+\begin{equation}
+\frac{x - mean(x)}{sd(x)}
+
+Perform z-score scaling in R with the `scale` function:
+```{r 03_MOD17-5}
+x<-rnorm(50, mean = 50, sd = 10)
+summary(x)
+
+x_s<-scale(x, center = TRUE, scale = TRUE)
+summary(x_s)
+```
+
+We can apply this to multiple columns using `lapply` (or functionality from `dplyr`)
+
+```{r 03_MOD17-6}
+knitr::kable(t(summary(subsetPredictors)))
+scaledSubsetPredictors<-data.frame(lapply(subsetPredictors, scale, center = TRUE, scale = TRUE))
+knitr::kable(t(summary(scaledSubsetPredictors)))
+```
+
+Alternatively, we can use `caret` to perform this for us. A benefit of using `caret` is that it will give us an object with the transformations. This allows us to use the same mean and standard deviation for future transformations, like in our test data.
+
+```{r 03_MOD17-7}
+library(caret)
+transformations<-preProcess(subsetPredictors)
+scaledSubsetPredictors<-predict(transformations,subsetPredictors)
+knitr::kable(t(summary(scaledSubsetPredictors)))
+```
+
+### Exercise
+1. Scale numeric variables in `train_x`
+2. Apply the same scales to `test_x`
+
+```{r 03_MOD17-8, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+titanicScales<-preProcess(train_x)
+train_x<-predict(titanicScales, train_x)
+test_x<-predict(titanicScales, test_x)
+```
+
+## Categorical variables
+When we look at categorical variables to get them ready for use in a `glm`, we need to:
+
+1. Check for typos etc. and fix
+2. Discard the column if only one value is present
+3. Discard the column if there is one very dominant value and one or more substantially less common value e.g. 98% of column = A, 1% = B, 0.5% = C, 0.5% = D
+4. Discard the column, or consolidate values, if there are a high number of unique values e.g.. consider consolidating address to postcode district or city
+
+### Handling value variance
+Use `caret`s `nearZeroVar` to take care of a lot of this! It's customisable and tells us which columns to remove due no, low, or too high variance.
+
+```{r 03_MOD17-9}
+# Remove saveMetrics to get back a vector of columns to be removed
+data(BloodBrain)
+results<-nearZeroVar(bbbDescr, saveMetrics = TRUE)
+sum(results$nzv)
+results
+```
+
+
+### Exercise
+1.  Can we remove any columns based on variance measures?
+
+### Manipulating factors
+For rebasing factors, handling typos etc. I recommend the `forcats` package.
+
+- `fct_explicit_na` converts missings into a distinct level. This can be very handy for modelling observations with missings, as there could be some systemic reason for the missings that has predictive value for your model
+- `fct_infreq` reorders a factor so the most common level is first
+- `fct_lump` consolidates low frequency levels into a single level
+- `fct_relabel` applies a function to level labels to do things like remove special characters
+
+```{r 03_MOD17-10}
+library(forcats)
+outputresult<-function(x) knitr::kable(fct_count(x))
+outputresult(predictors$Genotype)
+outputresult(fct_explicit_na(predictors$Genotype))
+outputresult(fct_infreq(predictors$Genotype))
+outputresult(fct_lump(predictors$Genotype,n = 3))
+outputresult(fct_relabel(predictors$Genotype,tolower))
+```
+
+### Applying changes to test data
+Because we're applying changes to training, we need to apply changes to our test data for things to match. 
+
+If we have a function that cleans up factors like:
+
+```{r 03_MOD17-11, tidy=FALSE}
+simpleclean<-function(x, keeplevels=3){
+  fct_infreq(
+    fct_lump(
+      fct_relabel(
+        fct_explicit_na(  x   )
+        ,tolower
+      )
+      , n=keeplevels
+    )
+  )
+}
+```
+
+To be able to replicate the results, we need to make our NAs explicit, consolidate the same factor levels that `fct_lump` consolidated and then put them in the same order.
+
+```{r 03_MOD17-12}
+reflectraining<-function(trainx,testx){
+  fct_relevel(
+    fct_other(
+      fct_relabel(
+        fct_explicit_na(testx)
+        ,tolower)
+      ,keep=levels(trainx)
+    )
+  ,levels(trainx))
+}
+```
+
+
+### Exercise
+1. Check if there are columns that should be removed from `train_x` and, if yes, remove them
+2. There are quite a few categorical variables in our `train_x`. Examine each and apply relevant modifications
+3. Apply changes to the test data
+
+```{r 03_MOD17-13, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+res<- nearZeroVar(train_x,uniqueCut = .25)
+if(length(res)>0) train_X <- train_x[,-res]
+factorcols<-sapply(train_x, is.factor)
+
+simpleclean<-function(x, keeplevels=3){
+  fct_infreq(
+    fct_lump(
+      fct_relabel(
+        fct_explicit_na(  x   )
+        ,tolower
+      )
+      , n=keeplevels
+    )
+  )
+}
+
+reflectraining<-function(trainx,testx){
+  fct_relevel(
+    fct_other(
+      fct_relabel(
+        fct_explicit_na(testx)
+        ,tolower
+        )
+      ,keep=levels(trainx)
+    )
+  ,levels(trainx))
+}
+
+train_x$pclass<-simpleclean(train_x$pclass)
+test_x$pclass<-reflectraining(train_x$pclass,test_x$pclass)
+outputresult(train_x$pclass)
+
+train_x$name<-NULL
+test_x$name<-NULL
+
+train_x$ticket<-NULL
+test_x$ticket<-NULL
+
+train_x$sex<-simpleclean(train_x$sex)
+test_x$sex<-reflectraining(train_x$sex, test_x$sex)
+outputresult(train_x$sex)
+
+train_x$embarked<-simpleclean(train_x$embarked, keeplevels = 2)
+test_x$embarked<-reflectraining(train_x$embarked, test_x$embarked)
+outputresult(train_x$embarked)
+
+train_x$boat<-NULL
+test_x$boat<-NULL
+
+# We could do some geocoding but for simplicity let's remove
+train_x$home.dest<-NULL
+test_x$home.dest<-NULL
+
+
+train_x$cabin[train_x$cabin==""]<-NA
+test_x$cabin[test_x$cabin==""]<-NA
+train_x$cabin<-simpleclean(substr(train_x$cabin,1,1))
+test_x$cabin<-reflectraining(train_x$cabin, substr(test_x$cabin,1,1))
+outputresult(train_x$cabin)
+
+```
+
+## Correlated variables
+We should remove highly correlated variables from our set of possible model features. `caret` has a function that will remove the highest generally correlated variable.
+
+```{r 03_MOD17-14}
+findCorrelation(cor(subsetPredictors))
+```
+
+## Handling missings
+Common methods for coping with missing data:
+
+- Removing rows with missings
+    - Con: reduces sample size
+    - Pro: use only complete data
+- [Continuous variables only] Putting in a default value like mean
+    - Con: tends to flatten model coefficient for variable
+    - Pro: simple to do
+- Putting in a predicted value
+    - Con: requires another set of data
+    - Pro: realistic values
+- [Continuous variables only] Making variable a categorical with an explicit missing category
+    - Con: information loss on continuous variables
+    - Pro: explicit modelling of missings
+
+### Converting to categorical
+Let's take a look at an example:
+
+```{r 03_MOD17-15, message=FALSE, warning=FALSE, eval=FALSE}
+library(smbinning)
+results = smbinning(cbind(training_x,diagnosis=as.numeric(training_y)-1),"diagnosis","IL_17E")
+knitr::kable(results$ivtable)
+
+training_x$IL_17E<-smbinning.gen(training_x,results,"new")$new
+testing_x$IL_17E<-smbinning.gen(testing_x,results,"new")$new
+fct_count(training_x$IL_17E)
+```
+
+
+### Exercise
+1. Convert age to a categorical variable using `smbinning`
+
+```{r 03_MOD17-16, echo=FALSE, results='hide', message=FALSE, warning=FALSE, eval=FALSE}
+results<-smbinning(cbind(train_x,train_y),"train_y","age", p = .1)
+results$ivtable
+train_x$age<-fct_infreq(smbinning.gen(train_x,results,"new")$new)
+test_x$age<-fct_relevel(smbinning.gen(test_x,results,"new")$new,levels(train_x$age))
+fct_count(train_x$age)
+```

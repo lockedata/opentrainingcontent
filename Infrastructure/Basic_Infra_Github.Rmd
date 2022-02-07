@@ -1,0 +1,53 @@
+# GitHub
+GitHub is a source control and continuous integration platform. It is available both in the cloud and as a local service, with free and paid-for tiers in both.
+
+GitHub uses git as it's source control engine so if you know how to use git you can interact with GitHub
+
+## GitHub CI
+To use GitHub for CI, you need to include a `.yml` files with configuration information for running tests etc. in `.github/workflows`
+
+```yaml
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+name: R-CMD-check
+
+jobs:
+  R-CMD-check:
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: r-lib/actions/setup-r@master
+      - name: Install dependencies
+        run: |
+          install.packages(c("remotes", "rcmdcheck"))
+          remotes::install_deps(dependencies = TRUE)
+        shell: Rscript {0}
+      - name: Check
+        run: rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "error")
+        shell: Rscript {0}
+```
+
+The `on` determines what events trigger the GitHub Action. The `jobs` support multiple processes. The `steps` tells the job what to execute. There is a much larger amount of of options and depth to building [workflows](https://help.github.com/en/actions/configuring-and-managing-workflows/configuring-a-workflow).
+
+You can use GitHub Actions for many purposes including prepapering code to be deployed.
+
+### {usethis} + {actions}
+The {usethis} package is a fantastic way to build R solutions more productively. The [{actions}](https://github.com/r-lib/actions) repo contains many examples of R related workflows to support R users. Learn more about the use of this package in [Jim Hester's tutorial](https://speakerdeck.com/jimhester/github-actions-for-r).
+
+```r
+install.packages("usethis")
+use_github_actions()
+```
+
+## Exercise
+1. Use RStudio to make a basic R package project with source control
+2. Add the repository to GitHub
+3. Create a Public Access Token (PAT) on Github
+4. Configure CI to build the pkgdown site using `usethis::use_github_action("pkgdown.yml")`.
+5. Add your PAT to your repos Secrets tab (Hint: useful info at  [secrets](https://github.com/r-lib/actions/tree/master/examples#managing-secrets))

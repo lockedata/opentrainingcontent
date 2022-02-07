@@ -1,0 +1,64 @@
+# V8
+
+## Purpose
+Use V8 to execute ad-hoc javascript or leverage pre-existing code in javascript.
+
+## Requirements
+- `V8` package required
+- [V8 system dependencies](https://github.com/jeroen/V8#installation) on Linux
+
+```{r Basic_R_V8-1}
+library(V8)
+```
+
+## Basics
+To run js code, you need a context.
+
+```{r Basic_R_V8-2}
+js<-v8()
+```
+
+We can send javascript code to be executed using the `eval` method.
+
+```{r Basic_R_V8-3}
+js$eval("Date()")
+```
+
+We can create variables inside our js context for use later.
+```{r Basic_R_V8-4}
+js$eval("var today= new Date()")
+js$eval("var val=3+5")
+js$eval("today")
+js$eval("Math.pow(val,2)")
+```
+
+We can send data to our JS context using the `assign` method.
+
+```{r Basic_R_V8-5}
+js$assign("iris", iris)
+js$eval("iris.length")
+```
+
+We can retrieve data using the `get` method.
+```{r Basic_R_V8-6}
+head(js$get("iris"))
+```
+
+We're not limited to native javascript functionality. We can add code from other sources like js libraries using the `source` method.
+
+```{r Basic_R_V8-7}
+js$source("https://raw.githubusercontent.com/MangoTheCat/swli/master/inst/js/forcem.js")
+```
+
+We can use functions using the `call` method
+```{r Basic_R_V8-8}
+# fn, episode, paragraphs
+js$call("forcem", "e4", 1)
+```
+
+## Exercise
+1. Play with the Lorem Ipsum generator.
+
+## Next steps
+1. Read the [docs](https://cran.r-project.org/package=V8)
+2. Check out [swli](https://github.com/MangoTheCat/swli)

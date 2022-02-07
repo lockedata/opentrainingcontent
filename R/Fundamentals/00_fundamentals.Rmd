@@ -1,0 +1,354 @@
+# (PART) R at a high level {-} 
+
+# About R
+
+R is an open source language released in 2001 that's ideal for [data wrangling](https://en.wikipedia.org/wiki/Data_wrangling) and [data science](https://en.wikipedia.org/wiki/Data_science). It has connectors to pretty every much every data source under the sun, allows you wrangle data like nobody's business, build pretty much every type of model ever thought up, and visualise it in all the niftiest ways.^[These superlatives are not disingenuous, R really is that broad and amazing.] R really is a tremendous language to add to your tool belt.
+
+## History
+R has a long lineage - it was written to re-implement the language [S](https://en.wikipedia.org/wiki/S_(programming_language)). S was a commercial language written in the mid-1970s to enable statistical and graphical processing.  Indeed much code written in S can still run today, a phenomenal feat! If you ever look at R and wonder "Why on Earth does it work like that?", the usual answer is "Because S".^[If you'd like to find out about the assignment operators' history (`<-` and `->`) and many of the other quirks of R, the article [Rbitrary](http://ironholds.org/projects/rbitrary/) is fantastic and highly irreverent reading.] 
+
+The previous paragraph might lead you to ponder why R is in use today and why the popularity is growing. R is a vibrant ecosystem that enables people to extend, enhance, and replace any part of it. There are many paradigms in R to facilitate object-oriented programming, functional programming, and more. If you can write something in C++, FORTRAN^[Yes, it still exists and yes, R still relies on it for some key algorithms], Python, or JavaScript--and of course, R!--you can write extensions for R. 
+
+There are currently more than eleven thousand extensions (referred to as packages) to R in the core ecosystem (which is a fancy word for the collected bits and pieces of R!) ^[[CRAN](https://www.r-project.org/)] and two and a half thousand packages in the genomics ecosystem ^[[BioConductor](https://www.bioconductor.org/)]. 
+
+We're also seeing emerging ecosystems and paradigms within CRAN. The [tidyverse](http://tidyverse.org/) is one such ecosystem, focussed primarily on analysing tabular data, and we'll be making a lot of use of it.
+
+## CRAN
+The core ecosystem is **CRAN**, the Comprehensive R Archive Network. [CRAN](https://cran.r-project.org) is maintained by some great people who put in place a large number of quality gates that an R package must adhere to in order to be made widely available. They then host these packages and do great things like daily re-runs of all package tests to ensure packages are still working. CRAN is the default source of packages for most R users. 
+
+If you use RStudio, you'll use a **mirror** of CRAN hosted by RStudio. There are a number of these mirrors scattered over the globe to help reduce the load on the central servers. You can use another one of these mirrors, or even set-up your own internal CRAN. 
+
+
+## Key points to know about R
+
+- R works in-memory which means that the processing is fast but the amount of data you can process is limited to how much RAM your data takes up and how much your computations will require. 
+- R is not multi-threaded by default, it works on a single CPU core. Making use of more than one of your cores to spread the load requires additional packages and often additional coding.
+- R is quirky! In some ways, R is a lot like other common programming languages, which can make it pretty easy to pick up. However, because R is still designed to be compatible with S, it's actually pretty darn old and as a result, really odd in places. 
+- Coding R will give you the typical gotcha's, and add another: case sensitivity. R is (un)fortunately a language where "Red" and "red" are different and this also extends to variable and function names (which we'll discuss later.) As a consequence, the most common errors you'll find when writing code in R are:
+    + Incorrectly placed or missing commas
+    + Incorrectly placed or missing brackets
+    + Incorrectly placed or missing operators
+    + Incorrect case used when typing
+- With so many packages available to extend R, the answer to "how do I write this?" is usually "there's a package for that".
+
+## Summary
+R is an great language for doing data analysis, data science, and more. It has it's quirks but the community around it is huge and is making R easier to adopt every day.
+
+# Why use R?
+R as a programming language is brilliant at its core competencies -- statistics and data visualisation. It's also a great "glue" language, by which I mean that you can use it to perform computations in many different languages and combine the results smoothly. As a result, R enables you to be an effective data wrangler, data scientist, and/or data visualisation practitioner. 
+
+The following section will show some uses that exemplify how little is required to do things in R, that in other languages or tools can take a substantial amount of time.
+
+```{block 00_fundamentals-1, type="future"}
+These are illustrative only. Don't worry if they don't make much sense. Writing code like these examples will be covered in later books.
+```
+
+## Data wrangling
+Here's a common issue I've had in the past: working with data from multiple sources, that should usually conform to a template, but don't. You end up with a whole stack of files that don't *quite* match the template, and as a result getting all this data read, combined, and then output somewhere else is often an incredibly difficult task. 
+
+This snippet of R code performs the following steps:
+
+1. Make functionality from the `tidyverse` available
+2. Identify files needing to be read and combined
+3. Read each file individually, whilst applying a column type enforcement
+4. Combine the results
+
+Combining the results involves matching the columns by name. It will create new columns when it finds additional columns in some of the data and fill in the data. When columns are missing from a dataset it will put NAs in those column for that data. 
+
+```{r 00_fundamentals-2, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r 00_fundamentals-3, warning=FALSE, message=FALSE, tidy=FALSE}
+library(tidyverse)
+
+# Change "data" to where your files are.
+# Remove the col_types bit if your columns
+# are fairly type safe.
+list.files("data", full.names = TRUE) %>%
+  map_df(read_csv, col_types = cols("c")) %>% 
+  bind_rows() %>% 
+  nrow()
+```
+
+The example is fairly simple in that it's reading in CSVs from a single directory. The great thing is you can consume data from multiple directories or locations by changing how you identify what files you want to process and you can process other formats simply by changing to the relevant read function for that file type.
+
+## Data science
+```{block 00_fundamentals-4, type="warning"}
+This section is for people with an interest in using R for Data Science. As such it does presume some prior knowledge of Data Science in general. If this section isn't for you, please skip ahead to the next section.
+```
+Part of building models and putting them to use that I've always found a bit painful is mapping the pre-processing stages to an operational scenario. Basically, how do you apply pre-processing steps like scaling variables in time to make a prediction using new data? 
+
+If you want to scale numeric variables, you need to keep some sort of record of the mean and standard deviation in the case of a [z-score](http://stattrek.com/statistics/dictionary.aspx?definition=z%20score) or the minimum and maximum values if you wanted to do a [minmax score](https://en.wikipedia.org/wiki/Feature_scaling#Rescaling). When you go on to predict values for new data you need to be able to use the same values from your original scaling process otherwise you get the wrong results. How do you then store and apply these values to new data? Probably with a lot of code and manual labour!
+
+If you wanted to take it a step further and perform a [Principal Component Analysis (PCA)](http://setosa.io/ev/principal-component-analysis/) to reduce the amount of features you were working with? Using a lot of the built-in functionality in R or other languages, you'd have no easy way to do that with the outputs of the a PCA transformation function (`princomp()`). Without being able to reproduce the transformation, any model you came up with using the principal components would be useless, because you'd never be able to use it.
+
+This snippet of R code performs the following steps:
+
+1. Make functionality from the `caret` package available
+2. Split data into training and test samples with the outcome column separate
+3. Build a linear regression model on data scaled using z-scores and turned into principal components 
+4. Apply the transformations and then our linear model to get predictions for test data
+
+
+Instead of writing a really long-winded block of code, you can use functionality from the package [caret](https://topepo.github.io/caret/) to add a pre-process step to your model development. It will then keep these pre-process steps as part of the model and whenever you use the model to make predictions it will first process the data based on the parameters and transformations used on the training data.
+
+```{r 00_fundamentals-5, tidy=FALSE, warning=FALSE}
+library(caret)
+
+training_data    <- mtcars[1:20,-2]
+training_outcome <- mtcars[1:20,2]
+test_data        <- mtcars[21:32,-2]
+test_outcome     <- mtcars[21:32,2]
+
+model <- train(training_data, training_outcome,
+              method="lm",
+              preProcess = c("scale","center","pca"))
+predictions <- predict(model, test_data)
+```
+
+## Data visualisation
+Data visualisation is an area where R makes it especially difficult to choose just a single example. Instead of showing the many fancy or interactive visualisations you can do in R, I'm instead going to show a part of the workflow.
+
+You'll often need to make a chart, and then make that chart for a lot of different datasets. These could be datasets for different customers, samples, or time slices.
+
+You can make a chart in R using the package [ggplot2](http://ggplot2.tidyverse.org) to build a chart of all data. 
+
+I'm going to use Dino the Datasaurus and his Data Dozen buddies^[The original Datasaurus was created by Alberto Cairo. [thefunctionalart.com](http://www.thefunctionalart.com/2016/08/download-datasaurus-never-trust-summary.html)] as example data here. Dino and his friends have the same summary statistics but very different data distributions. They show why visualising data is so incredibly vital.
+
+```{block 00_fundamentals-6, type="protip"}
+The other Dozen were generated using simulated annealing and the process is described in the paper *Same Stats, Different Graphs: Generating Datasets with Varied Appearance and Identical Statistics through Simulated Annealing* by Justin Matejka and George Fitzmaurice. [autodeskresearch.com](https://www.autodeskresearch.com/publications/samestats)
+
+In the paper, Justin and George simulate a variety of datasets that have the same summary statistics to the Datasaurus but have very different distributions.
+```
+
+```{r 00_fundamentals-7, tidy=FALSE}
+library(ggplot2)
+library(datasauRus)
+
+myPlot<- ggplot(datasaurus_dozen, aes(x,y)) +
+           geom_point()
+myPlot
+```
+
+You might just want to make it easy to see Dino and his friends. You can do this with a [small multiples](https://en.wikipedia.org/wiki/Small_multiple) chart, where you get a small chart per group.
+
+```{r 00_fundamentals-8}
+myPlot +
+   facet_wrap(~dataset)
+```
+
+Instead of many small charts in one file, you might want to produce a separate chart for for Dino and each of his buddies in a bigger piece of analysis. In a real world setting, you might want to loop through customers and produce a chart per customer. Alternatively, you might want to make a chart object and re-use it for many different slices of data in a big piece of analysis. 
+
+We made and stored a chart object (`myPlot`) and we can actually pass it some data that will override the data currently linked to the chart. This enables to re-use the chart for different datasets.
+
+For instance, another dataset in the `datasauRus` package is a set that illustrates the Simpson's Paradox^[Simpson's Paradox is the phenomena where high level statistics provide one conclusion but evaluating sub-groups within the data provides a very different conclusion. More information on Simpson's paradox can be found at [vudlab.com](http://vudlab.com/simpsons/)]. It has the same three columns (x, y, and dataset) so it can be used with `myPlot`.
+
+```{r 00_fundamentals-9}
+myPlot %+% simpsons_paradox
+```
+
+
+
+
+## Summary
+R is an incredibly powerful tool. It is useful in range of situations and is well worth learning. Reading this series of books will help you learn to be able to do the sorts of things outlined in this section.
+
+# Using RStudio
+```{block 00_fundamentals-10, type="readerTODO"}
+If you don't already have it, you should [install R and RStudio](http://www.rstudio.com/products/rstudio/download/#download). 
+
+If you're on Windows, it's also great if you can install [Rtools](http://cran.r-project.org/bin/windows/Rtools/). This gives you the tools to install packages from GitHub later on down the line.
+```
+
+[RStudio](http://rstudio.com) is a coding interface to R that makes it easier for you to be productive.^[If coding interfaces were game modes, RStudio is Easy mode, Visual Studio is Normal, R-GUI is Hard, vim is Insane, and Emacs is Legendary.] I'm devoting substantial amounts of this book to your working environment as you can use it to make learning and coding R much easier by taking the time to understand it.
+
+The interface will be split up into a top menu and then four panes, although only three may be visible when you first start RStudio.
+
+
+![](img/rstudioclean.png)
+
+## The console
+
+The (bottom) left hand section is the console. This is where you can execute R code directly.
+
+To use the console you type some code alongside the `>` and hit <kbd>Enter</kbd> \keys{\return} for the code to be executed. The result will then appear underneath your line of code. 
+
+Watch a video of using the console at [youtu.be/2hg1Qg7uLwU](https://youtu.be/2hg1Qg7uLwU).
+
+Errors, warnings, and messages will also appear in the console. We'll discuss what these are later.
+
+```{block 00_fundamentals-11, type='readerTODO'}
+Use the console to add two numbers together.
+```
+
+If the code you entered wasn't a complete statement e.g. `1 + 2 +`, when you hit <kbd>Enter</kbd> \keys{\return}, you'll get a new line only the `>` will now be a `+`. This indicates the code you're writing is a continuation of the previous line. R will allow you to continue building up a complete chunk of code this way. It'll run all the lines you entered as one block once it's been completed.
+
+If you want to clean your console and start afresh, hit <kbd>Ctrl</kbd> + <kbd>L</kbd> \keys{\ctrl + L} to remove whatever has been executed in the console this session.
+
+You can use your up and down arrow keys to navigate through previous code you've written and executed.
+
+```{block 00_fundamentals-12, type='glass'}
+If you commit one of the most common coding errors (incorrect amounts or places of brackets and commas) you might end up with an incomplete line and basically lock your console into having the `+` symbol at the beginning of each line. If you find yourself stuck with commands just writing and writing and never executing, hit the <kdb>Esc</kdb> key to cancel the code and get back to the standard cursor. 
+```
+
+## Scripts
+
+RStudio allows you to create and work with files containing code. These files give you a way to store and manage your code. 
+
+The most common file types you might use are R files (`.R`) and rmarkdown files (`.Rmd`). 
+
+```{block 00_fundamentals-13, type='future'}
+rmarkdown files are for generating documents with text and R code interleaved (like this book!) They'll be covered in a future book. If you want to get going, checkout the [rmarkdown](http://rmarkdown.rstudio.com) site.
+```
+
+You can create one of these files by going to *File > New > R Script*, the New File button, or with the hotkey combo^[I'm a big fan of hotkeys!] of <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>N</kbd> \keys{\ctrl + \shift + N}.
+
+Watch a video of how to do this at  [youtu.be/rWHV2VlQo2w](https://youtu.be/rWHV2VlQo2w).
+
+In an R script you can type code and execute it by hitting \keys{\ctrl + \return} <kbd>Ctrl</kbd> + <kbd>Enter</kbd>^[This hotkey is really nifty as it'll find the start and end of a block of code and send it all to the console to be executed.], or selecting the code to run and hitting the Run button. 
+
+You can execute all the code in a script by hitting \keys{\ctrl + \shift + \return} <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Enter</kbd> or hitting the Source button.
+
+```{block 00_fundamentals-14, type="readerTODO"}
+1. Open a new R script
+2. Write `10*5` in it and execute the code
+```
+
+## Code completion
+
+Whilst writing scripts or typing in our console, we can get help and be more productive by using **code completion**. Code completion will pick up from what we've typed so far and provide a navigable list of suggestions. 
+
+As we navigate through the list, it'll provide help text where possible and then it will complete the code we were typing.
+
+- You access the code completion by hitting \keys{\tab} <kbd>Tab</kbd> whilst typing
+- Once it's up you can keep typing to refine the list
+- Your arrow keys allow you to navigate the list \keys{\arrowkeyup \arrowkeydown}
+- Hit \keys{\esc} <kbd>Esc</kbd> to back out of the completion capability
+- Hit \keys{\tab} <kbd>Tab</kbd> to accept whatever value in the list is currently highlighted
+
+Watch a video of how to do this at [youtu.be/pGOF4gTyeXA](youtu.be/pGOF4gTyeXA).
+
+```{block 00_fundamentals-15, type="readerTODO"}
+1. On a new line of your script, type `a` and activate your code completion. Browse the list then cancel out of the list
+2. Overwrite the `a` with an `A` and go back into the code completion. Do you get the same list? What's different and why?
+```
+
+## Projects
+So far you've seen R as a scratch-pad (via the console) and for making an isolated script, but a lot of the time we have to put data, multiple scripts, documentation and more into a **project**.
+
+An RStudio project is a folder with an extra file. This file can be used to open RStudio, with everything laid out like it was before you closed the project. It can store preferences to allow projects to vary from the way you normally do things.^[Like converting tabs to spaces and the number of spaces characters it should replace with.]
+
+```{block 00_fundamentals-16, type="protip"}
+At this point in your R coding career, keeping everything where you left off is great. Later on, and especially if you work in anything where reproducibility is valued, you can go to *Tools > Project Options ...* and set the .Rdata fields to "no" so that nothing loads up into memory when you load the project.
+```
+
+You can, and should, create a new R project when embarking on a new area of work. To create a project go to *File > New Project*.
+
+
+This will popup a dialogue that gives you the option to create a brand new project directory, create one from some existing directory you might already have, or create one with the content of a project in your source control system (we'll talk about source control in a later book.)
+
+Most commonly, you'll want to create a new directory project. Once selected it'll then give you the option to create an empty project, a Shiny project (a feature for creating amazing dynamic reports,) or an R package. You'll normally select the empty projects. Once an option is selected, provide a name and where the project should go.
+
+Watch a video of how to do this at [youtu.be/etkSsF6r2iU](https://youtu.be/etkSsF6r2iU)
+
+```{block 00_fundamentals-17, type="future"}
+Working with source control, shiny, and creating R packages are all in later books.
+```
+
+You can navigate to projects using the project option in the top right corner or in the *File* section.
+
+```{block 00_fundamentals-18, type="readerTODO"}
+Create a new project to store the answers to exercises and any code you try out during this book. You don't have to save the script you were working on before this (unless you want to!)
+```
+
+## Summary
+RStudio is a fantastic environment for learning R and writing R code going forward. 
+
+Using code completion can be a great help in finding what to write and how to write it. 
+
+Other areas of the RStudio interface will be introduced as we go forward but taking the time to get to know the environment now will help you be more productive in future.
+
+# Useful resources
+Our coding environment, RStudio, is a great help to us. The code completion makes it easy to find things kind of related to what you're typing but sometimes you need to do a bit more digging or read a bit more than the snippet of help in the code completion window.
+
+## The built-in help
+R has pretty great built-in help. You might understand some of it but there's usually lots of it and most help files give you examples to run.
+
+The help files are accessible in the bottom right-hand corner of RStudio.
+
+If you want to see some of the built-in help whilst using code completion, you can hit <kbd>F1</kbd>. Similarly, you can select a word in script and hit <kbd>F1</kbd> to go to the help.
+
+If you don't have something specific to select from you can go to the help window and use the search facility. If there's a function that matches what you're typing that'll be short-listed, and you can select it and hit \keys{\return} <kbd>Enter</kbd>. Alternatively if you don't get a match, hitting \keys{\return} <kbd>Enter</kbd> once you've finished typing will enact a fuzzier search.
+
+![](img/help.png)
+
+Another way you can get help is by looking at the index of functions available for a given package. You go to the Packages tab and click on the package you're interested in. This loads up the index for that package and you can then read through what's available.
+
+The help window has some handy navigation features to make it easier to use:
+
+- In-file search bar for finding words in a help file
+- Navigation arrows for moving between files like Back and Forwards on a web-browser
+- The New Window button creates a popup with the file so that you make it bigger or put it onto another monitor
+
+## Online
+R is a great community that has produced many resources.
+
+- You can search for previous R questions or ask new ones on the ubiquitous [Stack Overflow](http://stackoverflow.com)
+- If you're tweeting about R, use the hash-tag *#rstats*. 
+    + If you want to see what's happening in the R world, I recommend you follow [Mara Averick (\@dataandme)](http://twitter.com/dataandme)
+    + If you want to ask a question, you can also tweet me [Steph Locke (\@stefflocke)](http://twitter.com/stefflocke)
+- RStudio provide a trove of fantastic [cheatsheets](http://www.rstudio.com/resources/cheatsheets/) -- including one for being super-productive in RStudio. These are great to download and/or print in order to keep handy as you're learning
+- Documentation for R packages is available on [CRAN](http://cran.r-project.org) but there are a number of online sites that try to improve the experience, including [rdrr.io](http://rdrr.io) and [rdocumentation.org](http://rdocumentation.org)
+- [R-bloggers](http://r-bloggers.com) is a site consolidating blogs from more than 500 people. It's a great way to find how-to's
+- [R Weekly](https://rweekly.org/) is a curated newsletter of key goings on, new packages, and blog posts from the R world
+- [DataCamp](https://www.datacamp.com/) is a nifty online learning platform for R, Python, and more.
+
+Finally, search is a wonderful thing and you should totally be searching for answers to your questions. Unfortunately, when you're first getting started with R, your Google-bubble^[Google's tailoring of your results] won't be very good at returning the results you're hoping for. To improve results, make sure to prefix searches with "R" and you can also use a customised version of Google called [rseek.org](http://rseek.org). Rseek specifically searches the sorts of sites mentioned above which can be limiting so you trade off breadth for initial accuracy.
+
+## Books
+Hopefully this book and it's follow ups will be helpful for learning R! However, the aim of producing a new book every two to three months might be a bit slow for your liking so I've included some great books^[All the links are links that will ideally take you to the most relevant Amazon site. I apologise if you're reading this and I was unable to to save you the hassle of digging out the book online. Thank you for reading this one though!] you can also turn to for learning R. 
+
+Additionally, understanding R won't necessarily make you a great data wrangler, data visualiser, or data scientist, or even a great coder so I've put included some recommended books on topics outside of R. 
+
+### R
+- **R for Data Science: Visualize, Model, Transform, Tidy, and Import Data** An end-to-end introduction to R  [geni.us/rfords](http://geni.us/rfords)
+- **Text Mining with R: A Tidy Approach** Learn how to do Natural Language Processing in R [geni.us/tidytext](http://geni.us/tidytext)
+- **ggplot2: Elegant Graphics for Data Analysis** Learn the ins and outs of one of the most common graphical packages for R [geni.us/ggplot2](http://geni.us/ggplot2)
+
+### Data wrangling
+- **SQL Cookbook** Helps you with SQL skills and being able to translate across different database dialects [geni.us/sqlcookbook](http://geni.us/sqlcookbook)
+
+### Data visualisation
+I have many of these books, but others are recommendations from others and are now on my list to buy!
+
+- **Show me the numbers** [geni.us/showmethenumbers](http://geni.us/showmethenumbers)
+- **The Visual Display of Quantitative Information** [geni.us/visdispquantinfo](http://geni.us/visdispquantinfo)
+- **Information is Beautiful** [geni.us/infoisbeautiful](http://geni.us/infoisbeautiful)
+- **The Truthful Art: Data, Charts, and Maps for Communication** [geni.us/truthfulart](http://geni.us/truthfulart)
+- **Data Visualisation** [geni.us/datavisualisation](http://geni.us/datavisualisation)
+- **Storytelling with Data** [geni.us/storytellingwithdata](http://geni.us/storytellingwithdata)
+
+### Data science
+- **Naked Statistics: Stripping the Dread from the Data** An engaging introduction into some statistical concepts [geni.us/nakedstatistics](http://geni.us/nakedstatistics)
+- **Statistics in Plain English** A primer on statistics [geni.us/statsplainenglish](http://geni.us/statsplainenglish)
+- **Data Science for Business** A non-technical introduction to data science and some of the maths [geni.us/dsforbiz](http://geni.us/dsforbiz)
+- **Forecasting: principles and practice** Learn all about forecasting methods (code is in R too!) [geni.us/forecasting](http://geni.us/forecasting)
+- **Regression Modeling Strategies: With Applications to Linear Models, Logistic and Ordinal Regression, and Survival Analysis** [geni.us/regression](http://geni.us/regression)
+- **Artificial Intelligence for Humans, Volume 1: Fundamental Algorithms** This and subsequent volumes are useful for getting to grips with some of the fancier bits of data science happening at the moment [geni.us/aiforhumans](http://geni.us/aiforhumans)
+
+### Miscellaneous
+- **The Checklist Manifesto: How to Get Things Right** Learning about how you can be effective is important to becoming effective  [geni.us/checkman](http://geni.us/checkman)
+- **The Phoenix Project** A novel on a painful transition to agility and adding value [geni.us/phoenixproj](http://geni.us/phoenixproj)
+- **The Mythical Man-Month: Essays on Software Engineering** Words of wisdom that are still very applicable today for working on data science projects [geni.us/mythicalman](http://geni.us/mythicalman)
+
+## In-person
+The R community, as well as doing a huge amount of tweeting, actually gets together in-person quite a bit. 
+
+If you'd like to go a meetup, then you should check out this [meetup directory](http://jumpingrivers.github.io/meetingsR). As well as these happenings, you can also check out [R-Ladies](https://rladies.org/) events. 
+
+We have a growing number of conferences and you can find ones to attend via the [conferences directory](https://jumpingrivers.github.io/meetingsR/events.html).
+
+## Summary
+There are so many resources available to people learning R. The community is awesome and you can get involved in any medium that suits you. If you're looking for something specific and finding it difficult to hunt down a suitable resource, tweet me (@SteffLocke)!

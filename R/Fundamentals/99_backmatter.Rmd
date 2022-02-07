@@ -1,0 +1,229 @@
+# (APPENDIX) Appendix {-}
+
+# Answers
+
+## R Data Types Exercises
+- Convert TRUE to an integer
+```{r 99_backmatter-1, linewidth=60}
+as.integer(TRUE)
+```
+
+- What is the datatype of the value returned by `Sys.time()`?
+```{r 99_backmatter-2, linewidth=60}
+class(Sys.time())
+```
+
+- What is the datatype of the value returned by `Sys.timezone()`?
+```{r 99_backmatter-3, linewidth=60}
+class(Sys.timezone())
+```
+
+- Make this quote into an R string
+> "Do you think this is a game?", he said. "No I think Jenga's a game", Archer responded.
+
+```{r 99_backmatter-4, tidy=FALSE, linewidth=60}
+'"Do you think this is a game?", he said. 
+ "No I think Jenga\'s a game", Archer responded.'
+```
+
+## Basic Operations Exercises
+- What is the result of `pi^2`?
+```{r 99_backmatter-5}
+pi^2
+```
+
+- Is pi greater than 3?
+```{r 99_backmatter-6}
+pi>3
+```
+
+- Construct a statement to check if 5 is both greater than 3 and less than or equal to 6
+```{r 99_backmatter-7}
+(5 > 3) & (5 <= 6)
+```
+
+- What are the results if you check to see if a sequence of 1 to 5 is less than or equal to 3?
+```{r 99_backmatter-8}
+1:5 <=3
+```
+
+## R Objects Exercises
+-  See what's in the built-in variable `letters`
+```{r 99_backmatter-9, linewidth=60}
+letters
+```
+
+-  Write a check to see if "A" is present in `letters`
+```{r 99_backmatter-10}
+"A" %in% letters
+```
+
+-  Find out which values in the sequence 1 to 10 are greater than or equal to 3 and less than 7.
+```{r 99_backmatter-11, linewidth=60}
+myseq<-1:10
+myseq>=3 & myseq<7
+```
+
+-  Make a vector containing the numbers 1 to 50;
+```{r 99_backmatter-12}
+fifty<-1:50
+```
+
+-  Make a vector containing two words;
+```{r 99_backmatter-13}
+words<-c("fifty","words")
+```
+
+-  What happens when you combine these two vectors?
+```{r 99_backmatter-14, linewidth=60}
+c(fifty, words)
+# the numbers get converted to text
+```
+
+-  Make a data.frame using the two vectors
+```{r 99_backmatter-15}
+fiftywords<-data.frame(fifty, words)
+```
+
+-  What happened to your text vector?
+```{r 99_backmatter-16}
+# It got recycled 25 times
+```
+
+-  Make a list containing some of the variables you've created so far.
+```{r 99_backmatter-17, linewidth=60}
+list(fifty, words, fiftywords)
+```
+
+-  Return the some rows from the `iris` dataset
+```{r 99_backmatter-18, eval=FALSE}
+head(iris)
+```
+
+```{r 99_backmatter-19, echo=FALSE}
+kable(head(iris))
+```
+
+## Data manipulation exercises
+- Select all `LETTERS` before "X";
+```{r 99_backmatter-20, linewidth=60}
+LETTERS[LETTERS<"X"]
+```
+
+- Select the first 5 rows from the built-in data.frame `iris`;
+```{r 99_backmatter-21, eval=FALSE}
+iris[1:5, ]
+```
+
+```{r 99_backmatter-22, echo=FALSE}
+kable(iris[1:5, ])
+```
+
+- Select the first 2 columns from `iris`;
+```{r 99_backmatter-23, eval=FALSE}
+head(iris[,1:2])
+```
+
+```{r 99_backmatter-24, echo=FALSE}
+kable(head(iris[,1:2]))
+```
+
+- Select the column Sepal.Length from `iris` by name.
+```{r 99_backmatter-25}
+head(iris[,"Sepal.Length"])
+```
+
+- Select rows from the `iris` data.frame where the `Sepal.Length` is greater than 5.8cm;
+```{r 99_backmatter-26, eval=FALSE}
+head(iris[iris$Sepal.Length>5.8,])
+```
+
+```{r 99_backmatter-27, echo=FALSE}
+kable(head(iris[iris$Sepal.Length>5.8,]))
+```
+
+- Select rows from the `iris` data.frame where the Sepal.Width is below the average for that column.
+```{r 99_backmatter-28, eval=FALSE}
+head(iris[iris$Sepal.Width<mean(iris$Sepal.Width),])
+```
+
+```{r 99_backmatter-29, echo=FALSE}
+kable(head(iris[iris$Sepal.Width<mean(iris$Sepal.Width),]))
+```
+
+- Select everything from `iris` except the Species column;
+```{r 99_backmatter-30, eval=FALSE}
+head(iris[,-5])
+```
+
+```{r 99_backmatter-31, echo=FALSE}
+kable(head(iris[,-5]))
+```
+
+- Create a copy of the `iris` data that just contains the first 100 rows and call it `myIris`;
+```{r 99_backmatter-32}
+myIris<-iris[1:100,]
+```
+
+- Update the species column to the value "Unknown" in `myIris`;
+```{r 99_backmatter-33}
+myIris$Species<-"Unknown"
+```
+
+- Delete rows from `myIris` where the sepal length is greater than 5.5.
+```{r 99_backmatter-34}
+myIris<-myIris[myIris$Sepal.Length<=5.5,]
+```
+
+
+## R functions Exercises
+1. Use `pmin()` to find the smallest values element-wise of the three vector `1:51`, `25:75`, `30:-20`
+
+```{r 99_backmatter-35, linewidth=60}
+pmin(1:51, 25:75, 30:-20)
+```
+
+- Use `paste()` to combine the upper case letters into a single string with `", "` between each letter
+
+```{r 99_backmatter-36, linewidth=60}
+paste(LETTERS, collapse = ", ")
+```
+
+- Use `list.files()` to see what files are in your current directory. Return the fully qualified names not just the filenames.
+
+```{r 99_backmatter-37, eval=FALSE}
+list.files(full.names = TRUE)
+```
+
+- View the code for `ncol()` and work out how the number of columns is being determined.
+
+```{r 99_backmatter-38, tidy=FALSE}
+ncol
+
+# ncol performs the `dim()` function on the
+# object we pass in. This returns a vector
+# of length 2. We then subset to the second
+# element, which is the number of columns.
+```
+
+## R packages Exercises
+- Install `datasauRus`
+```{r 99_backmatter-39, eval = FALSE}
+install.packages("datasauRus")
+```
+
+- Load the library `datasauRus`;
+```{r 99_backmatter-40, eval = FALSE}
+library(datasauRus)
+```
+
+- Browse `datasauRus`'s help pages;
+```{r 99_backmatter-41, eval = FALSE}
+help(package="datasauRus")
+```
+
+- Read the `datasauRus` vignette;
+```{r 99_backmatter-42, eval = FALSE}
+vignette("Datasaurus")
+```
+

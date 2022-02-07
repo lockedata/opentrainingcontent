@@ -1,0 +1,101 @@
+# (PART) Data Science Fundamentals {-} 
+# Initial exploration
+You should explore your data to look for issues and get a general understanding of the data.
+
+```{r Basic_ML_DataPrep-1}
+library(tidyverse)
+library(AppliedPredictiveModeling)
+data(AlzheimerDisease)
+predictors %>% 
+  cbind(diagnosis) ->
+  alzheimers
+```
+
+Common things to explore/check for:
+
+- Unusual distributions
+- Outliers
+- Missings
+- Correlations
+
+
+We can get an effective view of our data using the `skimr` package.
+
+```{r Basic_ML_DataPrep-2}
+alzheimers %>% 
+  skimr::skim_to_wide()%>% 
+  head()
+```
+
+
+Visualise the relationships between numeric variables using the original `pairs()` function or `ggpairs()` from `GGally`. This overview visualisation method, is good for up to maybe twenty variables before it's really difficult to a) compute and b) visualise.
+
+```{r Basic_ML_DataPrep-3, fig.height=10}
+alzheimers %>% 
+  select_if(is.numeric) %>% 
+  select(1:10) %>% 
+  GGally::ggpairs(aes(alpha=.1))
+```
+
+Alternatively, the `xray` package can be useful, especially with lots of variables for looking at distributions.
+
+```{r Basic_ML_DataPrep-4, fig.height=15}
+alzheimers%>% 
+  select(1:10) %>% 
+  xray::distributions()
+```
+
+It can also be used to get a quick view of potential anomalies.
+```{r Basic_ML_DataPrep-5}
+alzheimers %>% 
+  xray::anomalies()%>% 
+  head()
+```
+
+If you have data which includes a date, you can use the `timebased()` function to generate graphs for visually inspecting if distributions changed over time.
+
+There are a lots of other useful packages out there for exploring your data. The`visdat` package gives us some options for exploring our dataset at a high level.
+```{r Basic_ML_DataPrep-6}
+alzheimers %>% 
+  visdat::vis_dat()
+```
+
+```{r Basic_ML_DataPrep-7}
+alzheimers %>% 
+  visdat::vis_miss(cluster=TRUE)
+```
+
+## Automated and assisted EDA
+Generating lots of charts etc can be a pain. There are somee tools that can help you. The `IEDA` package provides an interactive exploratory data analysis shiny application that you can use to explore your data. 
+
+Alternatively, or as well as, you can use the DataExplorer package and it's `create_report()` function to generate a good quality report overviewing the data.
+
+```{r Basic_ML_DataPrep-8, eval=FALSE}
+DataExplorer::create_report(alzheimers,y = "diagnosis")
+```
+
+## Exercise
+1. Load the `titanic3` dataset from the `PASWR` package
+3. Summarise the data 
+4. If we're trying to predict who is going to die on the titanic, which column(s) can we immediately remove from our dataset?
+
+
+
+
+# Cleaning data
+We can use `janitor` to do some preparation and basic cleanup.
+
+```{r Basic_ML_DataPrep-9}
+head(colnames(alzheimers),20)
+
+alzheimers %>% 
+  janitor::clean_names() ->
+  alzheimers
+
+
+head(colnames(alzheimers),20)
+```
+
+Other cleanup steps will often involve manipulation of values, based on the data itself. `lubridate`, `stringr`, and `forcats` will often come in handy. `recipes` can then be used for feature preparation and reduction.
+
+

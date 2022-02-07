@@ -1,0 +1,94 @@
+
+# Feature reduction
+Especially with traditional model types, we want to avoid overfitting by not including all our variables in our model.
+
+```{r Basic_ML_FeatureReduction-1}
+library(tidyverse)
+library(AppliedPredictiveModeling)
+library(tidymodels)
+data(AlzheimerDisease)
+predictors %>% 
+  cbind(diagnosis) ->
+  alzheimers
+
+
+alzheimers %>% 
+  initial_split(0.7) ->
+  splits
+
+train = training(splits)
+test  = testing(splits)
+```
+
+## Removing variables
+One way to reduce columns in our model is to discard candidate features before they enter our model.
+
+
+### Handling value variance
+Use `caret`s `nearZeroVar` to take care of a lot of this! It's customisable and tells us which columns to remove due to no, low, or too high variance.
+
+```{r Basic_ML_FeatureReduction-2}
+alzheimers %>% 
+  recipe(diagnosis ~ .)%>% 
+  step_nzv(all_numeric())  ->
+  rec
+```
+
+
+### Exercise
+1. Using `recipes` do any columns from the `titanic3` data get dropped due to limited variance?
+
+### Highly correlated variables
+We should remove columns that exhibit high correlation. The caret package has a function for identifying columns to remove based on a correlation matrix.
+
+```{r Basic_ML_FeatureReduction-3}
+alzheimers %>% 
+  recipe(diagnosis ~ .)%>% 
+  step_corr(all_numeric())  ->
+  rec
+```
+
+
+### Exercise
+1. Are there any highly correlated variables one could remove from the titanic3 dataset?
+
+## De-selecting variables
+We can additionally remove columns with low predictive power. We can use variable importance to see which ones add little value to the model.
+
+```{r Basic_ML_FeatureReduction-4, eval=FALSE}
+glm(diagnosis~., alzheimers, family = "binomial") %>% 
+  var_imp() ->
+  alz_varimps
+
+alz_varimps %>% 
+  rownames_to_column("Variable") %>% 
+  arrange(desc(Overall))
+```
+
+
+
+### Exercise
+1. Run variable importance for a model with all the variables included for predicting survival using your training data. Which ones would you remove? 
+
+
+## Combining variables
+### Principal Component Analysis (PCA)
+PCA reduces features to expressions of variance. It works on scaled numeric data. View a [visual explanation of PCA](http://setosa.io/ev/principal-component-analysis/). It requires scaled numeric variables before you can run it.
+
+```{r Basic_ML_FeatureReduction-5}
+alzheimers %>% 
+  recipe(diagnosis ~ .)%>% 
+  step_pca(all_numeric())  ->
+  rec
+
+rec %>% 
+  prep(train) %>% 
+  bake(train)->
+  train_pca
+
+plot(train_pca )
+```
+
+
+### Exercise 
+1. Run PCA for your trimmed `titanic3` dataset, how many principal components does the data exhibit?

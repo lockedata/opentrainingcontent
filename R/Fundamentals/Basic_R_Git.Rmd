@@ -1,0 +1,223 @@
+# (PART) Collaboration {-} 
+# Source control
+
+```{r Basic_R_Git-1, echo=FALSE, results='hide'}
+do_eval=FALSE
+```
+
+## Source control concepts
+
+Source control is a system for tracking changes to files over time.
+
+What's the point?
+
+- No version hell
+- Why did I do that?
+- Satisfy auditors
+- UNDO, UNDO, UNDO!!
+
+What techs are there?
+
+- Central systems like SVN
+- Distributed systems like Git
+- Hybrid systems like TFS
+
+Why GitHub?
+
+- Git is awesome
+- Public / private models
+- Great UX
+- Great integrations
+
+
+([\@cthydng](https://twitter.com/cthydng/status/575483540202106880))
+![git model](img/Github-flow.png)
+
+## Git glossary
+
+ - Repository: Your project and it's history
+ - Remote: The (TFS/GitHub/VSO etc) server
+ - Clone:Take a linked copy of a repository
+ - Fork: Take an unlinked copy of a repository
+ - Pull: Update your copy of a repository
+ - Add: Include a file in a change
+ - Commit: Make the latest state of all the added files the new default state
+ - Push: Update the central copy of the repository with your commits
+ 
+## Learning resources
+- [Git cheatsheet](https://training.github.com/kit/downloads/github-git-cheat-sheet.pdf)
+- [Git book](https://git-scm.com/book/en/v2)
+- [Happy Git with R](http://happygitwithr.com/)
+
+
+## Getting started
+
+### Gists
+- README
+- Revisions
+
+### Creating a gist in R
+
+First we need to get ready 
+```{r Basic_R_Git-2, eval=do_eval}
+library(gistr)
+gistr::gist_auth()
+```
+
+Then we can use `gist_create()` to send a file to gist.github.com
+
+```{r Basic_R_Git-3, eval=do_eval}
+res1<-
+  gistr::gist_create(files = "../samples/README.Rmd",
+                     description = "Example code",
+                     browse = FALSE,
+                     public = FALSE
+  )
+```
+
+```{r Basic_R_Git-4, echo=FALSE, results='hide', warning=FALSE, message=FALSE, eval=do_eval}
+gistr::delete(res1)
+```
+
+The `files` argument will take a vector so you can upload mutliple files at once.
+
+```{r Basic_R_Git-5, eval=do_eval}
+res2<-
+  gistr::gist_create(files = c("../samples/README.Rmd", "../samples/README1.Rmd"),
+                     description = "Example code",
+                     browse = FALSE,
+                     public = FALSE
+  )
+```
+
+```{r Basic_R_Git-6, echo=FALSE, results='hide', warning=FALSE, message=FALSE, eval=do_eval}
+gistr::delete(res2)
+```
+
+Alternatively, we can include a destination filename for some code that we'd like to add to a gist.
+
+```{r Basic_R_Git-7, eval=do_eval}
+res3<-
+  gistr::gist_create(description = "Example code",
+                   filename = "gistrExample.R",
+                   browse = FALSE,
+                   public = FALSE,
+code={'
+  gistr::gist_create(description = "Example code",
+                   filename = "gistrExample.R",
+                   code={"library(gistr)"}
+'})
+```
+
+Once you have a gist object in R, you can then do things like update the files and then send that update to the online gist.
+
+```{r Basic_R_Git-8, eval=do_eval}
+update(update_files(res3,"../samples/README.Rmd"))
+```
+
+
+```{r Basic_R_Git-9, echo=FALSE, results='hide', warning=FALSE, message=FALSE, eval=do_eval}
+gistr::delete(res3)
+```
+
+### Exercise
+1. Add one of your files to a gist
+
+## Your local workflow
+
+```
+git config --global user.name "John Doe"
+git config --global user.email johndoe@example.com
+```
+
+- [SSH key set up](https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/)
+
+### Add git to existing projects
+- Tools > Version Control > Project Setup
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/jYkaGwoO1q4" frameborder="0" allowfullscreen></iframe>
+
+
+
+### Committing your code - in a GUI
+- Select changed / new / deleted files to commit
+- Hit "Commit"
+- Add Short tile for change
+- Hit Enter, and add details
+- Hit commit
+
+```bash
+git init
+git add somefile.R
+git commit -m "Some message"
+```
+
+### Exercise
+1. Add git to a directory
+2. Commit some code
+
+## Your distributed workflow
+### Using existing repos
+- Get a URL
+- File > New Project > Version Control > Git 
+- C&P URL
+
+#### Exercises
+1. Go to GitHub and "Fork" [lockedata/sampleProject](https://github.com/lockedata/sampleProject)
+2. Go to your copy and copy the "Clone with SSH" URL
+2. Clone the repo using the cmd line
+
+### Adding an external source
+- Create new repository in GitHub
+- Get code for "existing repository"
+- Open shell
+- Copy & paste
+
+### Upload your code
+- Use the GUI to commit code
+- Hit Push!
+
+### Exercise
+1. Create repo online for one of your projects
+1. With your code all committed, add the online repo
+1. Upload your code
+
+### Checking for changes
+Use the "pull" to get the latest copy of code online.
+
+### Exercises
+1. Pull the latest copy of your code
+
+## Good practices
+
+### Commit often
+Keep changes as small as possible to avoid loss and more pain later.
+
+### Pull then Push
+Before you push your changes always hit pull first!
+
+### Merge conflicts
+Merge conflicts happen when multiple people have done something to the same lines at the same time and git doesn't know which one to pick. 
+
+Resolve by picking which bits you want. Commit and push!
+
+```
+<<<<<<< HEAD
+I tried changing to this line
+=======
+And I tried changing to this line
+>>>>>>> COMMITONREMOTE
+```
+
+to
+
+```
+And I tried changing to this line
+```
+
+### Exercises
+- Alter a line on your README and commit it locally
+- Alter the same line differently online and commit it
+- Pull the changes
+- Fix the merge conflict in your text editor / R
+- Commit and push the fix

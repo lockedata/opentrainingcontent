@@ -1,0 +1,61 @@
+# Gitlab
+Gitlab is a source control and continuous integration platform. It is available both in the cloud and as a local service, with free and paid-for tiers in both.
+
+Gitlab uses git as it's source control engine so if you know how to use git you can interact with Gitlab.
+
+## Gitlab CI
+To use gitlab for CI, you need to include a `.gitlab-ci.yml` file with configuration information for running tests etc.
+
+```yaml
+image: rocker/tidyverse
+test:
+  script:
+    - apt-get install -y --no-install-recommends qpdf
+    - R -e 'devtools::install_dev_deps()'
+    - R -e 'devtools::check()'
+```
+
+The `image` is the base Docker container that has everything needed to run your project. In this case, we have a basic R installation.
+
+The `test` is the one or more commands needed to verify the project is doing what's intended. The name `test` isn't something you'll see in every config file as you can have many jobs like testing or deploying the project.
+
+The `script` is one of the configuration options for a given job. This tells the job what to execute but [others](https://docs.gitlab.com/ee/ci/yaml/README.html#configuration-parameters) include bespoke `image`s to run different jobs e.g. testing against different version of R, and `artifacts` to publish e.g docker containers for shiny apps.
+
+Building Shiny apps into Docker containers can be done using the Docker CI workflow template on Gitlab if you have a Dockerfile in the project. You can tweak this file but without tweaking this will publish your Shiny app to the container registry for the project which will be consumable via the docker command line as a docker image for deployment.
+
+```yaml
+# This file is a template, and might need editing before it works on your project.
+# Official docker image.
+image: docker:latest
+
+services:
+  - docker:dind
+
+before_script:
+  - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+
+build-master:
+  stage: build
+  script:
+    - docker build --pull -t "$CI_REGISTRY_IMAGE" .
+    - docker push "$CI_REGISTRY_IMAGE"
+  only:
+    - master
+
+build:
+  stage: build
+  script:
+    - docker build --pull -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG" .
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
+  except:
+    - master
+```
+
+See a [journey towards a customised R pipeline](https://blog.methodsconsultants.com/posts/developing-r-packages-with-usethis-and-gitlab-ci-part-iii/) by Method Consultants to get some insight into how you can improve things over time.
+
+The [Gitlab Auto DevOps](https://docs.gitlab.com/ee/topics/autodevops/) can be used to reduce deployment complexity by shipping built projects to a Kubernetes cluster. Auto Build can be used to build Shiny app projects if they have Dockerfiles included in them.
+
+## Exercise
+1. Host an R package project on Gitlab and configure CI to test the package
+2. Host a Shiny app with a Dockerfile and configure the build of a Docker image
+3. Run the an instance of the container you built locally

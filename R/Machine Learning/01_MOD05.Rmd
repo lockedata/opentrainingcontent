@@ -1,0 +1,335 @@
+
+```{r 01_MOD05-1, include=FALSE}
+library(tidyverse)
+library(modelr)
+library(ggplot2)
+library(broom)
+library(FFTrees)
+```
+
+
+# R key concepts
+## Formula
+R uses a formula system for specifying a model.
+
+- You put the outcome variable on the left
+- A tilde (`~`) is used for saying "predicted by"
+- Exclude an intercept term by adding `-1` to your formula
+- You can use a `.` to predict by all other variables e.g. `y ~ .`
+- Use a `+` to provide multiple independent variables e.g. `y ~ a + b`
+- You can use a `:` to use the interaction of two variables e.g. `y ~ a:b`
+- You can use a `*` to use two variables and their interaction e.g. `y ~ a*b`
+- You can construct features on the fly e.g. `y ~ log(x)` or use `I()` when adding values e.g. `y ~ I(a+b)`
+
+For more info, check out `?formula`
+
+## Useful parameters
+- `na.action` can be set to amend the handling of missings in the data
+- `model`,`x`,`y` controls whether you get extra info about the model and data back. Setting these to `FALSE` saves space
+
+
+
+# Linear regression
+
+## Linear regression
+Purpose: perform a line of best fit analysis to predict a continuous variable
+
+```{r 01_MOD05-2, echo=FALSE}
+ggplot(iris, aes(x=Petal.Width, y=Sepal.Length))+
+  geom_point()+
+  geom_smooth(method='lm',se = FALSE)
+```
+
+## Function
+```{r 01_MOD05-3}
+lm(Sepal.Length~Petal.Width, data = iris)
+```
+
+## Using the tidyverse
+```{r 01_MOD05-4}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .)
+```
+
+## Summarising the model
+
+```{r 01_MOD05-5}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  summary()
+```
+
+## Extracting coefficients
+
+```{r 01_MOD05-6}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  coefficients()
+```
+
+## Extracting fitted values
+
+```{r 01_MOD05-7}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  fitted() %>% 
+  plot()
+```
+
+## Base R predictions
+
+```{r 01_MOD05-8}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  predict(data.frame(Petal.Width = 1:6))
+```
+
+## Model summary statistics
+
+```{r 01_MOD05-9}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  broom::glance()
+```
+
+## Fitted values and errors
+
+```{r 01_MOD05-10}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) %>% 
+  broom::augment()
+```
+
+## tidyverse predictions
+
+```{r 01_MOD05-11}
+iris %>% 
+  lm(Sepal.Length~Petal.Width, .) ->
+  irismodel
+
+iris %>% 
+  sample_frac(.3) %>% 
+  add_predictions(irismodel)
+```
+
+## Exercises
+1. Using the dataset airquality, build some models predicting the month based on weather attributes
+2. Using AIC as your selection criteria, which of your models performed best?
+
+# Logistic regression
+
+## Logistic regression
+Purpose: get a probability that a discrete outcome will occur
+
+```{r 01_MOD05-12, echo=FALSE}
+ggplot(mtcars, aes(x=mpg, y=vs))+
+  geom_point()+
+  geom_smooth(method="glm",se = FALSE, method.args = list(family = "binomial"))
+```
+
+## Function
+```{r 01_MOD05-13}
+glm(vs~mpg, data = mtcars, family="binomial")
+```
+
+## Using the tidyverse
+```{r 01_MOD05-14}
+mtcars %>% 
+  glm(vs~mpg, ., family="binomial")
+```
+
+
+## Summarising the model
+
+```{r 01_MOD05-15}
+mtcars %>% 
+  glm(vs~mpg, ., family="binomial") %>% 
+  summary()
+```
+
+## Extracting coefficients
+
+```{r 01_MOD05-16}
+mtcars %>% 
+  glm(vs~mpg, ., family="binomial") %>% 
+  coefficients()
+```
+
+## Getting the fitted values
+
+```{r 01_MOD05-17}
+mtcars %>% 
+  glm(vs~mpg, ., family="binomial") %>% 
+  fitted() %>% 
+  plot()
+```
+
+## Base R prediction
+
+```{r 01_MOD05-18}
+to_prob<-as_function(~(exp(.)/(1+exp(.))))
+mtcars %>% 
+  glm(vs~mpg, ., family="binomial") %>% 
+  predict(data.frame(mpg = 10:35)) %>% 
+  to_prob()
+```
+
+## Getting summary statistics
+
+```{r 01_MOD05-19}
+mtcars %>% 
+  glm(vs~mpg, ., family="binomial") %>% 
+  broom::glance()
+```
+
+## Getting fitted values and errors
+
+```{r 01_MOD05-20}
+mtcars %>% 
+  glm(vs~mpg, ., family="binomial") %>% 
+  broom::augment()
+```
+
+## Exercises
+1. Load the MASS library and build some candidate models for the dataset `birthwt` trying to predict the column `low`
+2. Using AIC as your selection criteria, which of your models performed best?
+
+# Decision trees
+
+## Decision trees
+Purpose: predict a discrete outcome
+
+
+```{r 01_MOD05-21, echo=FALSE}
+titanic %>% 
+  FFTrees(survived ~., data=.) %>% 
+  plot(main = "Titanic", 
+     decision.names = c("Died", "Survived"))
+```
+
+## Function 
+```{r 01_MOD05-22}
+FFTrees(survived ~., data=titanic)
+```
+
+## Using the tidyverse
+```{r 01_MOD05-23}
+titanic %>% 
+  FFTrees(survived ~., .)
+```
+
+## Getting an overview
+
+```{r 01_MOD05-24}
+titanic %>% 
+  FFTrees(survived ~., .) %>% 
+  summary()
+```
+
+## Getting a visual overview
+
+```{r 01_MOD05-25}
+titanic %>% 
+  FFTrees(survived ~., .) %>% 
+  plot()
+```
+
+
+## Getting variable importance
+
+```{r 01_MOD05-26}
+titanic %>% 
+  FFTrees(survived ~., .) %>% 
+  plot(what="cues")
+```
+
+## Making predictions
+
+```{r 01_MOD05-27}
+titanic %>% 
+  sample_n(10) ->
+  testdf
+
+titanic %>% 
+  FFTrees(survived ~., .) %>% 
+  predict(.,data=testdf) %>% 
+  plot()
+```
+
+## Exercises
+1. Build a decision tree for predicting the `y` column in the `bank` dataset
+2. What are the most important factors in this tree?
+
+# Sampling
+
+## Sampling
+To prevent your model from being too specific i.e. overfitted, you should only build a model on part of your data. A good model doesn't see much loss of accuracy when tested, an overfitted model will.
+
+## Basic sampling
+```{r 01_MOD05-28}
+titanic %>% 
+  mutate(id=row_number()) ->
+  tidf
+
+tidf %>% 
+  sample_frac(.7) ->
+  training
+
+tidf %>% 
+  anti_join(training) ->
+  testing
+
+training %>% 
+  dplyr::select(-id) %>% 
+  glm(survived ~., ., family="binomial") %>% 
+  predict(testing) ->
+  testoutcome
+```
+
+## Using the tidyverse
+
+```{r 01_MOD05-29}
+library(modelr)
+titanic %>% 
+  resample_partition(c(training=.7, testing=.3)) ->
+  splits
+
+splits$training %>% 
+  as.data.frame() ->
+  training
+
+splits$testing %>% 
+  as.data.frame() ->
+  testing
+
+training %>% 
+  glm(survived ~., ., family="binomial") %>% 
+  predict(testing) ->
+  testoutcome
+```
+
+## Bootstrapping
+Use bootstrapping to take many different training sets and construct models and blend the results.
+
+```{r 01_MOD05-30}
+library(purrr)
+mtcars %>% 
+  modelr::bootstrap(100) %>% 
+  .$strap %>% 
+  purrr::map(~glm(vs ~ mpg, data=.)) %>% 
+  purrr::map_df(., broom::tidy, .id="id") ->
+  modelparams
+```
+
+## Bootstrapping
+```{r 01_MOD05-31}
+modelparams %>% 
+  ggplot(aes(x=estimate))+
+  geom_density()+
+  facet_wrap(~term,scales = "free")
+```
+
+## Exercises
+1. Using the same columns as the model you came up with earlier for `airquality`, take a 70% training sample and construct the model using the training data.
+1. Make predictions for the test data and plot a distribution of the errors
+1. Using bootstrapping, what does the spread of coefficient values for the various columns look like for predicting survival of the titanic?

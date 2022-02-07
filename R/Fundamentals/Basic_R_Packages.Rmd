@@ -1,0 +1,185 @@
+
+
+# R packages
+
+## R packages
+R packages can contain:
+
+- R code
+- Data
+- Associated help files
+- "Other stuff"
+
+The simplest contain: 
+
+- DESCRIPTION
+- R/
+
+The best R packages: 
+
+- Contain good documentation
+- Have unit tests
+- Typically have a narrowly defined scope
+
+## Getting started
+We'll use two key packages today.
+
+One to get you started, `starters`, and one to help you develop and test your package, `devtools`.
+
+### starters
+Use starters to set packages and other project types for you. The step is to install and configure starters
+
+```{r eval=FALSE}
+remotes::install_github("lockedata/starters")
+starters::start_here()
+```
+
+```{r Basic_R_Packages-1, eval=FALSE}
+starters::create_package_project("myFirstPackage11",
+                                title="Example package",
+                                folder = "~",
+                                initial_status = "wip",
+                                git = TRUE,
+                                pkgdown = TRUE,
+                                external_setup = NULL,
+                                open = TRUE)
+```
+
+### The DESCRIPTION
+The DESCRIPTION file contains the high-level information about your package.
+
+### Exercise
+2. Use starters to create a package project
+3. Open the project it has set up
+4. Edit the DESCRIPTION file to explain how this your first package and that it'll contain functions you've developed
+
+
+## Adding functions
+## Functions
+Functions go in the R directory. Typically, we have one per function or group of functions. Each function should be documented with Roxygen, and functions that you want end users to be able to use should have `@export` in their roxygen.
+
+## Basic checking
+Use devtools to load the functions into memory for ad-hoc testing with them. If there's a syntax error, the loading up won't work.
+
+```{r Basic_R_Packages-2, eval=FALSE}
+devtools::load_all()
+```
+
+## Exercise
+1. Add your functions as individual files in your R directory
+2. Load them all up and check if you can use them
+
+## Adding data
+Data that's in a raw format (like Excel) gets stored in `inst/extdata/`, whilst data intended to be an R object (like `iris`) gets made as an R object and then saved into the `data/` directory.
+
+```{r Basic_R_Packages-3, eval=FALSE}
+newIris<-iris[1:100,]
+devtools::use_data(newIris)
+```
+
+We then need to make the data available with some documentation. Typically, the information about datasets will go into the package.R file. It is very similar Roxygen to that of R functions.
+
+```{r Basic_R_Packages-4}
+#' A subset of iris data
+#' @format A data frame with 100 rows and 5 columns
+"newIris"
+```
+
+###  Exercises
+1. Take a sample of 70% of the airquality data and save it to the `data/` directory
+2. Go to the `R/` directory and open the package R file
+2. Add documentation for the airquality subset to the file
+
+## Writing vignettes
+### Vignettes
+Vignettes are a longer form of documentation that show your R package works overall. Perhaps in the context of specific data / conditions or just documenting a workflow. 
+
+You can have multiple vignettes per package.
+
+```{r Basic_R_Packages-5, eval=FALSE}
+devtools::use_vignette("Vignette2")
+```
+
+### Basic rmarkdown
+[rmarkdown.rstudio.com](http://rmarkdown.rstudio.com)
+
+### Exercise
+1. Open the existing vignette and amend it to cover your R functions.
+
+## Relying on other packages
+### Other packages
+You don't just have to rely on base R for your code. You can use other packages too. These need to go in the Imports section of your DESCRIPTION and may need some specific stuff in your package.R file depending on usecase.
+
+```{r Basic_R_Packages-6, eval=FALSE}
+devtools::use_package("devtools")
+```
+
+### Referencing functions from other packages
+- If you're not going to use a lot of code from another package, just use namespacing
+- If you're going to use something like `%>%` very often you can import it `@ImportFrom magrittr %>%`
+- If you're going to use a lot of functions from a package, you can import it all `@Import magrittr`
+
+### Exercises
+1. Add `rlang` as a dependency
+2. Change your area finding function to use `rlang::as_function`
+
+## Checking your package
+### Tests
+We can write unit tests to check our functions work as expected. 
+
+- Testing uses the package `testthat` 
+- Tests list in the `tests/testthat/` directory
+- All files containing tests get prefixed with `test-`. 
+- Typically you test defaults, options, edge cases, and conditions that will trigger errors
+
+### Tests
+A set of tests for a function might look like:
+```{r Basic_R_Packages-7, eval=FALSE}
+context("myFunc")
+test_that("myFunc's default return expected results",
+          {
+            expect_equal(myFunc(1),2)
+          })
+```
+
+Each set of tests is in a `test_that()` block and tests consist of one or more assertions about what you expect.
+
+### Running tests
+You can run your unit tests for your package as you go along to see if you're doing things correctly.
+
+```{r Basic_R_Packages-8, eval=FALSE}
+devtools::test()
+```
+
+
+### Checking your package
+We don't just need to test our functions with unit tests, we need to verify the documentation is uptodate, that examples work, that what we've done conforms to minimum standards.
+
+```{r Basic_R_Packages-9, eval=FALSE}
+devtools::check()
+```
+
+
+### Exercises
+1. Write some unit tests for your functions
+2. Check that your tests are passing
+3. Check your package overall
+
+## Simple installation
+If you have the package as a project, you can use devtools to install it.
+
+```{r Basic_R_Packages-10, eval=FALSE}
+devtools::install()
+```
+
+If the package is available on a source control system, again we can usually use devtools to install it.
+
+```{r Basic_R_Packages-11, eval=FALSE}
+devtools::install_github("hadley/devtools")
+```
+
+If the package is available on CRAN or another repository then you can install it by providing the repository URL in the `install.packages()` function.
+
+```{r Basic_R_Packages-12, eval=FALSE}
+install.packages("devtools",repos="https://MYCUSTOMURL.COM/CRAN")
+```

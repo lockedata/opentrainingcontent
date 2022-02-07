@@ -1,0 +1,251 @@
+# Evaluating models
+```{r Basic_ML_EvaluatingModels-1}
+library(tidyverse)
+library(tidymodels)
+library(AppliedPredictiveModeling)
+data(AlzheimerDisease)
+predictors %>% 
+  cbind(diagnosis) ->
+  alzheimers
+
+alz_s = initial_split(alzheimers)
+alz_train = training(alz_s)
+alz_test = testing(alz_s)
+
+recipe(diagnosis ~ ., alz_train) %>% 
+  step_scale(all_numeric()) %>% 
+  step_pca(all_numeric()) %>% 
+  step_dummy(all_outcomes()) %>% 
+  prep(alz_train) ->
+  rec
+
+rec %>%  
+  bake(alz_train) %>% 
+  glm(diagnosis_Control ~ ., data = .) ->
+  fullmodel
+```
+
+## Train vs Test
+When we fit models, the underlying algorithm will minimise some measure of error. Using the same metric or another metric that represents how good the model is in relation to the observed data will be overly optimistic. The model is as good as it can be on the training data. Instead we evaluate our model on data that it has never seen before. We evaluate our models on our *test* data.
+
+## Commensurate comparisons
+Many metrics of model quality are dependent on the number of observations in the dataset. This means that models built on different volumes (perhaps because of different handling of missing values) cannot be compared with metrics like AIC.
+
+## `broom`
+Use `broom` to make tidy versions of model outputs.
+
+```{r Basic_ML_EvaluatingModels-2}
+
+library(broom)
+
+# Coefficients
+tidy(fullmodel)
+
+# Fitted data
+head(augment(fullmodel))
+
+# Key statistics
+glance(fullmodel)
+```
+
+## Interpreting coefficients
+### Sense-checking
+It is worth checking that the coefficients match expectations. 
+
+If a coefficient is the opposite sign to what you expect, then it can be because the variable is correlated with another variable. 
+
+For example, let's say we had two fields Total Income and Self-employed Income. These two variables would be very heavily correlated as one is part of the other. In such a case Total Income could end up with a positive coefficient, but Self-employed Income could have a negative coefficient. This would be because Self-employed Income might be positively correlated generally but once Total Income has been fitted, Self-employed Income is negative to reduce the overall values appropriate to a Self-employed person's income.
+
+In such circumstances, consider:
+
+- removing a variable
+- unlinking the two variables
+- include one term and it's interaction with the other
+
+### Low impact coefficients
+If coefficients are small, they have little impact on overall values. These are candidates for removal in the case of continuous variables, or being collapsed into the base factor level in the case of categorical values.
+
+### P-Values
+Each coefficient gets a p-value that indicates whether the coefficient's weighting is considered significant. In R, this is made easier with the placement of asterixes at the end. 
+
+Check coefficients with high p-values as these are candidates for removal, or in the case of factors, collapsing.
+
+```{r Basic_ML_EvaluatingModels-3}
+tidy(fullmodel)
+```
+
+### Model fit
+You should see both for train and test whether there are problem areas.
+
+```{r Basic_ML_EvaluatingModels-4}
+fullmodel %>% 
+  augment() %>% 
+  ggplot() +
+  aes(x=optiRum::logit.prob(.fitted), 
+      group = Genotype,
+      colour = Genotype) + 
+  geom_density() +
+  facet_wrap(~diagnosis_Control)
+```
+
+The package `modelr` can help us easily add predicted values in a tidy way.
+```{r Basic_ML_EvaluatingModels-5}
+alz_test %>% 
+  bake(rec, .) %>% 
+  modelr::add_predictions(fullmodel) %>% 
+  ggplot() +
+  aes(x=optiRum::logit.prob(pred), 
+      group = Genotype,
+      colour = Genotype) + 
+  geom_density() +
+  facet_wrap(~diagnosis_Control) 
+  
+```
+
+### Exercise
+1. Look at the summaries for your titanic models
+1. Are there any counter-intuitive coefficients?
+1. Are there any columns that indicate they could be removed?
+
+
+## Key metrics - classification
+
+### Residual deviance
+Residual deviance is a measure of how much error is in the model, after considering all the variables in the model.^[Null deviance is the measure of error when considering just the intercept] The smaller the residual deviance, the better.
+
+```{r Basic_ML_EvaluatingModels-6}
+deviance(fullmodel)
+```
+
+### AIC
+Akaike’s information criterion (AIC) is a measure of information captured by a model and penalises more variables over fewer variables. The smaller the AIC, the better.
+
+```{r Basic_ML_EvaluatingModels-7}
+AIC(fullmodel)
+```
+
+### Exercise
+1. Use `broom`s `glance` function for each model and combine the results using `rbind`
+2. Is there a single model that minimises deviance and AIC at the same time?
+3. Based on information so far, which model would you choose?
+
+
+
+### Classification rates
+We can look at how well models correctly classify cases in our training and our test data. This is good if we are planning on using a logistic regression for classification purposes. You should usually see the accuracy go down when producing a confusion matrix for the test data.
+
+```{r Basic_ML_EvaluatingModels-8}
+alz_test %>% 
+  bake(rec, .) %>%  
+  modelr::add_predictions(fullmodel, "fullmodel") %>% 
+  mutate(fm_diagnosis=as.numeric(fullmodel>0.5)) %>% 
+  mutate_at(vars(contains("diagnosis")), factor, levels=c("1","0"))->
+  alz_test_scored
+
+conf_mat(alz_test_scored, 
+         diagnosis_Control, 
+         fm_diagnosis)
+```
+
+### Exercise
+1. Produce a `confusionMatrix` for each of your models on the test data
+2. Which is the most accurate at predicting Survival?
+3. Is the same model the most accurate overall (i.e. using the balanced accuracy metric)?
+
+### Discriminatory power
+Another key case for performing a logistic regression is to get a probability for something happening. In such cases, it's usually the relative probability that is more important than the absolute probability. 
+
+
+We can use a Receiver Operating Curve (**ROC**) graph to get measures of discriminatory power. A ROC chart ranks each point by predicted score and calculates the cumulative true positive (*Sensitivity*) and false positive (*1- Specificity*) rates and plots these. 
+
+In a ideal world, the model would get 100% of the positives correctly classified, without incorrectly classifying anything. 
+
+In a random world, the model gets as many right as it gets wrong. The diagonal line on the chart, represents that scenario.
+
+Each model is usually somewhere between these two cases. The area under the ROC curve but above the Random line can be used to calculate the **Area Under the Curve (AUC)**. This is then transformed into the **Gini coefficient** to present a percentage level of discriminatory power.
+
+This can be used across models for the same data, and the higher the better. You should usually see the gini coefficient go down when producing a chart for the test data.
+
+```{r Basic_ML_EvaluatingModels-9, tidy=FALSE, eval=TRUE}
+library(optiRum)
+  giniChart(alz_test_scored$fullmodel,alz_test_scored$diagnosis_Control)
+```
+
+### Exercise 4
+1. Produce a gini chart for each of your models based on test data
+2. Which has the best gini coefficient?
+3. Taking into account model complexity, AIC, accuracy, and the gini coefficient which model would you pick?
+
+## Key metrics - regression
+```{r  updatesettings1, include=FALSE}
+knitr::opts_chunk$set( tidy=TRUE, results="hold", cache=TRUE, message = FALSE) 
+library(tidyverse)
+library(tidymodels)
+library(PASWR)
+```
+
+We’ll use the built-in R swiss data for predicting fertility score on the basis of socio-economic indicators.
+
+```{r swiss}
+
+# Load the data
+data("swiss")
+# Inspect the data
+sample_n(swiss, 3)
+
+```
+
+We start by creating two models:
+
+Model 1, including all predictors
+Model 2, including all predictors except the variable Examination
+
+```{r models}
+
+model1 <- lm(Fertility ~., data = swiss)
+model2 <- lm(Fertility ~. -Examination, data = swiss)
+
+```
+
+
+`rsq()`, `rmse()` and `mae()` [yardstick package], computes, respectively, the R2, RMSE and the MAE.
+
+```{r modelr}
+predictions <- model1 %>% predict(swiss)
+data.frame(
+  R2 = rsq_vec(estimate=predictions, truth=swiss$Fertility),
+  RMSE = rmse_vec(estimate=predictions, truth=swiss$Fertility),
+  MAE = mae_vec(estimate=predictions, truth=swiss$Fertility)
+)
+```
+
+`glance()` [broom package], computes the R2, adjusted R2, sigma (RSE), AIC, BIC.
+
+```{r glance}
+library(broom)
+glance(model1)
+```
+
+
+### QQ plots
+A QQ plot displays the distribution of a value compared to a theoretical or predicted distribution of value.
+
+It's done by ordering data and then identifying the percentage of observations with values below the breakpoints. 
+
+If both the actual and predicted values have the same distribution the QQ plot will show the same increase in cumulative inclusion in both simulataneously. This will make a straight diagonal line.
+
+If the predicted values have a different distribution to the actuals, we'll see deviations from a straight diagonal line.
+
+The type of underlying distribution will affect the closeness of the points - a normal distribution has most data appearing within 25-75% of the range of values so our quantile markers will be denser in the middle of our data.
+
+```{r}
+qqnorm(swiss$Infant.Mortality,ylab = "Actual", xlab="Normal distribution")
+```
+
+We can use ggplot2 to view distributions
+
+```{r}
+ggplot(iris, aes(sample = Sepal.Width, colour = factor(Species))) +
+  stat_qq() +
+  stat_qq_line()
+```

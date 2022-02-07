@@ -1,0 +1,85 @@
+# rmarkdown basics
+
+Producing documents / documentation directly in R means that you closely interweave (knit) your analysis and R code together. This reduces rework time when you want to change or extend your code, it reduces time to produce new versions, and because it's code it's easier to apply strong software development principles to it.
+
+Oh, and you don't need to spend hours making text boxes in powerpoint!
+
+
+ - necessary package: knitr
+ - necessary package: rmarkdown
+ - necessary software: [pandoc](http://johnmacfarlane.net/pandoc/installing.html) (comes bundled in rstudio)
+ - recommended software: [MiKTeX](http://miktex.org/) (for PDF rendering)
+ 
+Useful packages:
+
+- [xaringan](https://github.com/yihui/xaringan)
+- [bookdown](https://github.com/rstudio/bookdown)
+- [thesisdown](https://github.com/ismayc/thesisdown)
+ 
+### Exercise
+1. Create a new Rmd file
+2. Render it in different formats
+
+## rmarkdown standard documentation
+
+We can get a nifty reference from  [github.com/rstudio/rmarkdown](https://raw.githubusercontent.com/rstudio/rmarkdown/gh-pages/authoring_basics.md)
+
+## Chunks
+Code chunks allow us to execute a block of code. When building code blocks some useful *chunk options* are:
+
+- the language: select from r, python, sql, and more e.g. `{r}`
+- the name: it's a good habit to get into to name your chunks e.g. `{r widget}`
+- evaluation: choose whether the chunk of code should be evaluated `{r eval=FALSE}`
+- results: choose how the output should included, select from hide, asis, hold e.g. `{r results="hide"}`
+- messages/warnings: choose whether messages or warnings should be included in the output e.g. `{r messages=TRUE, warnings=FALSE}`
+- error: prevent errors in the code from halting production `{r error=FALSE}`
+- tidy: auto-tidy that code! e.g. `{r tidy=TRUE}`
+- child: use the contents from another Rmd instead of a code block `{r child=a_file.Rmd}`
+
+[More on code chunks](https://rmarkdown.rstudio.com/authoring_rcodechunks.html)
+
+### Exercise
+1. Create an R code chunk that will error
+2. Ensure the chunk is configured so that you may still render the document
+3. Add a chunk that loads the tidyverse and prints the iris data. Make the chunk execute invisibly.
+
+## Metadata
+rmarkdown uses YAML^[Yet Another Markup Language] to define important information at the beginning of the document. We can have metadata that relates to the document as a whole, the data that should be used to build the document, and what the output documents should look like.
+
+```yaml
+---
+title: something
+author: steph
+date: `r Sys.Date()`
+output:
+  html_document:
+    toc: true
+---
+```
+
+[More on metadata](https://rmarkdown.rstudio.com/authoring_rcodechunks.html)
+
+### Exercise
+1. Make the document render to a html document and using the metadata page, ensure:
+    + tables of data get paginated
+    + code is collapsed by default
+    
+## Input parameters 
+We can allow our reports to take external inputs by specifying them in our metadata. 
+
+```yaml
+---
+title: "My Document"
+output: html_document
+params:
+  customer: !r mypkg::default_customer_dataset
+  sales: !r mypkg::default_sales_dataset
+---
+```
+
+These parameters can then be accessed within the report using `params$param_name`. You can send values to the `render()` function by including `params=list()` and providing values inside the list.
+
+[More on parameterized reports](https://rmarkdown.rstudio.com/developer_parameterized_reports.html)
+
+### Exercise
+1. Add a chunk that returns the row count of an arbitrary dataset passed to the report

@@ -1,0 +1,77 @@
+# ShinyProxy
+
+[ShinyProxy](//shinyproxy.io) is an open source docker container solution for hosting and managing shiny apps. ShinyProxy will spin up containers for shiny apps internally.
+
+```{bash fetch, eval=FALSE}
+docker pull openanalytics/shinyproxy-demo
+docker run openanalytics/shinyproxy-demo
+```
+
+You will need to Dockerize shiny apps with something like `rize` first. Then you register the containers inside your shinyproxy configuration
+
+application.yml:
+```yaml
+specs:
+  - id: euler
+    display-name: Euler's number
+    container-cmd: ["R", "-e", "shiny::runApp('/root/euler')"]
+    container-image: openanalytics/shinyproxy-template
+    access-groups: scientists
+```
+
+This info supplements high-level configuration of the overall proxy.
+
+```yaml
+proxy:
+  title: Open Analytics Shiny Proxy
+  logo-url: http://www.openanalytics.eu/sites/www.openanalytics.eu/themes/oa/logo.png
+  landing-page: /
+  heartbeat-rate: 10000
+  heartbeat-timeout: 60000
+  port: 8080
+  authentication: ldap
+  admin-groups: scientists
+  ldap:
+    url: ldap://ldap.forumsys.com:389/dc=example,dc=com
+    user-dn-pattern: uid={0}
+    group-search-base:
+    group-search-filter: (uniqueMember={0})
+    manager-dn: cn=read-only-admin,dc=example,dc=com
+    manager-password: password
+  docker:
+    cert-path: /home/none
+    url: http://localhost:2375
+    port-range-start: 20000
+```
+
+There are detailed [configuration file](https://www.shinyproxy.io/configuration/) notes available.
+
+This application file needs to be included in a docker image and run for shinyprox to work and setup additional containers.
+
+```
+FROM openjdk:8-jre
+
+RUN mkdir -p /opt/shinyproxy/
+RUN wget https://www.shinyproxy.io/downloads/shinyproxy-2.1.0.jar -O /opt/shinyproxy/shinyproxy.jar
+COPY application.yml /opt/shinyproxy/application.yml
+
+WORKDIR /opt/shinyproxy/
+CMD ["java", "-jar", "/opt/shinyproxy/shinyproxy.jar"]
+```
+
+Practically this means any deployment of new shiny apps involves changing the config file, rebuilding the shinyproxy image, and re-deploying it. As the redeployment of a single container can cause momentary downtime, managing deployments to happen ot of hours or work in a rolling fashion on systems like Kubernetes (K8s) are recommended.
+
+[Deploying to K8s](https://github.com/openanalytics/shinyproxy-config-examples/tree/master/03-containerized-kubernetes) involves a Dockerfile with K8s capabilities added.
+
+```
+FROM alpine:3.6
+ADD https://storage.googleapis.com/kubernetes-release/release/v1.7.4/bin/linux/amd64/kubectl /usr/local/bin/kubectl
+RUN chmod +x /usr/local/bin/kubectl
+EXPOSE 8001
+ENTRYPOINT ["/usr/local/bin/kubectl", "proxy"]
+```
+
+This can be used along with the application config to build a K8s suitable container. This then gets added to the K8s config and `kubectl` gets used to deploy the latest changes.
+
+## Exercise
+Add an existing shiny container to an application.yml file and build a shinyproxy container. Run the solution and navigate to your shiny app.

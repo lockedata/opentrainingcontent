@@ -1,0 +1,296 @@
+# Feature engineering
+When we get our first cut of data, it might not have enough relevant explanatory variables in it. 
+
+We can supplement our data with data from additional sources, we can produce aggregate measures, and add lagged or historic measures. 
+
+These new variables can then be considered when we run a model.
+
+```{r Basic_ML_FeatureEngineering-1}
+library(tidyverse)
+library(AppliedPredictiveModeling)
+data(AlzheimerDisease)
+predictors %>% 
+  cbind(diagnosis) ->
+  alzheimers
+```
+
+When we do our data preparation, by cleaning variables we are engineering *new* features derived from existing features and using those instead of the originals. We can go onto to more to clean variables where it relies on the data contained in the model.
+
+## Scale numeric variables
+Most types of models work better where variables are scaled to similar value domains. This means we need to transform numeric variables and typically we want to be able to apply these transformations to new data.
+
+
+```{block Basic_ML_FeatureEngineering-2, type="warning"}
+Before we look at scaling variables, we should split our data. This is to avoid information from our test sample being encoded in our training sample. 
+
+For instance, if we scale a variable via it's z-score (more on this later) then we need a mean and standard deviation. Using the mean and standard deviation of all your data includes values from your test data, which means your model will be incorporating information from your test observations in the model. This increases, even if only a bit, the level of accuracy on your test data.
+```
+
+What we mean by **scaled** is transforming each numeric variable so that it is in a similar range. Common scaling methods are:
+
+- **minmax** Express numbers as a percentage of the maximum after subtracting the minimum. This results in range $[0,1]$ for training data but can result in a different range in test data and, therefore, production!
+\begin{equation}
+\frac{x - min(x)}{max(x) - min(x)}
+\end{equation}
+- **z-score** Express numbers as the distance from the mean in standard deviations. This results in a range that's notionally $[-\infty,+\infty]$ and results will be in the same range in test data.
+\begin{equation}
+\frac{x - mean(x)}{sd(x)}
+\end{equation}
+
+Perform z-score scaling in R with the `scale` function:
+```{r Basic_ML_FeatureEngineering-3}
+x<-rnorm(50, mean = 50, sd = 10)
+x_s<-scale(x, center = TRUE, scale = TRUE)
+skimr::skim(data.frame(x,x_s))
+```
+
+We can apply this to multiple columns using `dplyr`.
+
+```{r Basic_ML_FeatureEngineering-4}
+alzheimers %>% 
+  mutate_if(is.numeric, scale ) %>% 
+  select(1:10) %>% 
+  head()
+```
+
+The problem with this is the mean and standard deviation are not retained so we couldn't correctly scale new data. 
+
+Using the `recipes` package we can start building a reusable process for a model that we might want to build. 
+
+## Handling missings
+Common methods for coping with missing data:
+
+- Removing rows with missings
+    - Con: reduces sample size
+    - Pro: use only complete data
+- [Continuous variables only] Putting in a default value like mean
+    - Con: tends to flatten model coefficient for variable
+    - Pro: simple to do
+- Putting in a predicted value
+    - Con: requires another set of data
+    - Pro: realistic values
+- [Continuous variables only] Making variable a categorical with an explicit missing category
+    - Con: information loss on continuous variables
+    - Pro: explicit modelling of missings
+
+## Converting to categorical
+Let's take a look at an example:
+
+```{r Basic_ML_FeatureEngineering-5, message=FALSE, warning=FALSE}
+library(smbinning)
+alzheimers %>% 
+  mutate(diagnosis=unclass(diagnosis)-1) %>% 
+  smbinning::smbinning("diagnosis","IL_17E") ->
+  sm_IL_17E
+
+sm_IL_17E%>% 
+  pluck("ivtable")
+```
+
+This can then be applied to data to generate new versions of the columns.
+```{r Basic_ML_FeatureEngineering-6}
+alzheimers %>% 
+  mutate(IL_17E= smbinning::smbinning.gen(., sm_IL_17E)$NewChar) %>% 
+  select(IL_17E, everything()) %>% 
+  select(1:10) %>% 
+  head()
+```
+
+
+### Exercise
+1. Convert age to a categorical variable using `smbinning` in the titanic data
+
+
+## Categorical variables
+When we look at categorical variables to get them ready for use in models, we usually need to:
+
+1. Check for typos etc. and fix
+2. Discard the column if only one value is present
+3. Discard the column if there is one very dominant value and one or more substantially less common value e.g. 98% of column = A, 1% = B, 0.5% = C, 0.5% = D
+4. Discard the column, or consolidate values, if there are a high number of unique values e.g. consider consolidating address to postcode district or city
+
+- Use forcats to process factors to tidy them up, reduce the number of levels, make NAs explicit etc.
+- Consider reducing variation in columns for high variance columns. For instance, reduce postcode down to district unless you have substantial amounts of data
+- Build functions to enable the consistent application of treatments if not possible via recipes
+
+
+### Manipulating factors
+For rebasing factors, handling typos etc. I recommend the `forcats` package.
+
+- `fct_explicit_na` converts missings into a distinct level. This can be very handy for modelling observations with missings, as there could be some systemic reason for the missings that has predictive value for your model
+- `fct_infreq` reorders a factor so the most common level is first
+- `fct_lump` consolidates low frequency levels into a single level
+- `fct_relabel` applies a function to level labels to do things like remove special characters
+
+```{r Basic_ML_FeatureEngineering-7}
+library(forcats)
+
+alzheimers %>%
+  pluck("Genotype") -> 
+  ge 
+
+ge %>% fct_count()
+ge %>% fct_explicit_na() %>% fct_count()
+ge %>% fct_infreq() %>% fct_count()
+ge %>% fct_lump(3) %>% fct_count()
+ge %>% fct_relabel(tolower) %>% fct_count()
+```
+
+### Applying changes to test data
+Because we're applying changes to training, we need to apply changes to our test data for things to match. 
+
+If we have a function that cleans up factors like:
+
+```{r Basic_ML_FeatureEngineering-8, tidy=FALSE}
+simpleclean<-function(x, keeplevels=3){
+  fct_infreq(
+    fct_lump(
+      fct_relabel(
+        fct_explicit_na(  x   )
+        ,tolower
+      )
+      , n=keeplevels
+    ))
+}
+```
+
+To be able to replicate the results, we need to make our NAs explicit, consolidate the same factor levels that `fct_lump` consolidated and then put them in the same order.
+
+```{r Basic_ML_FeatureEngineering-9}
+reflectraining<-function(trainx,testx){
+  fct_relevel(
+    fct_other(
+      fct_relabel(
+        fct_explicit_na(testx)
+        ,tolower)
+      ,keep=levels(trainx)
+    )
+  ,levels(trainx))
+}
+```
+
+
+## Exercise
+1. There are quite a few categorical variables in our titanic data. Examine each and apply relevant modifications
+
+
+## Additional data
+One of the best things we can do to add features is to add adjacent data. For instance, if we were analysing sales then we could bring in features about the sales person, the customer, the logistics and more to help identify areas impacting sales.
+
+## Lags
+Lagged values are past values brought forward for use as predictive variables. These might be things like the previous payment amount, time spent playing previously etc.
+
+`lag()` (and `lead()` although it tends to be less relevant whilst building models) returns a previous row's value onto the current row.
+
+```{r Basic_ML_FeatureEngineering-10}
+lag(1:5)
+```
+
+Use lags to provide prior values, like position 6 months ago:
+```{r Basic_ML_FeatureEngineering-11}
+lag(1:50, n = 6, default = 0)
+```
+
+Use lags to flag if values changed
+```{r Basic_ML_FeatureEngineering-12}
+x=rep(c(2,1,1,2),2)
+x==lag(x)
+```
+
+Use lags to determine change
+```{r Basic_ML_FeatureEngineering-13}
+x=1:15
+(x/lag(x))-1
+```
+    
+
+## Aggregates
+Producing aggregate measures like lifetime value, typical profitability, max months in arrears in the past year, times seen etc are useful measures.
+
+It is worth noting though that if you make aggregates of historic data and use these in a model, going forward you will need those levels of historic data to make predictions.
+
+Find the rolling mean /  max / min / etc... over previous values:
+```{r Basic_ML_FeatureEngineering-14}
+library(RcppRoll)
+iris %>% 
+  group_by(Species) %>% 
+  mutate(rollMean=roll_meanr(lag(Sepal.Width),
+                             n = 5))%>% 
+  head()
+```
+
+Find the min / max / sum / etc... in all prior observations:
+```{r Basic_ML_FeatureEngineering-15}
+iris %>% 
+  group_by(Species) %>% 
+  mutate(smallest=cummin(Sepal.Width))%>% 
+  head()
+```
+
+
+## Data presence
+Instead of encoding data, sometimes the presence or absence of information can be useful features. For instance, how complete is a person's profile, have we had previous interactions with someone, do they fill in surveys?
+
+## recipes
+I briefly mentioned earlier the `recipes` package. This allows us to make reusable models of transformations for both feature engineering and reduction so that we can save ourselves a lot of work.
+
+There's key terminology in using `recipes` that you should know:
+
+- **recipe** a set of instructions describing how to prepare something from ingredients
+- **steps** the instructions in a recipe
+- **prepare** get ingredients ready
+- **bake** assemble prepared ingredients to get the desired output of the recipe
+- **juice** process ingredients to extract some valuable component
+
+We use these terms in the construction of a feature management recipe, as we aim for a modelling ready dataset.
+
+First, let's split up our data into train and test.
+```{r Basic_ML_FeatureEngineering-16}
+library(tidymodels)
+
+alzheimers %>% 
+  initial_split(0.7) ->
+  splits
+
+train = training(splits)
+test  = testing(splits)
+```
+
+Now we need to make a recipe that outlines our rough models later on.
+
+```{r Basic_ML_FeatureEngineering-17}
+# There are other construction methods you can check out
+rec = recipe(train, diagnosis ~ .)
+```
+
+Once you have a recipe, you need to provide the steps of said recipe. These can add columns, manipulate existing ones, or drop columns.
+
+```{r Basic_ML_FeatureEngineering-18}
+rec %>% 
+  step_scale(all_numeric()) %>%
+  step_corr(all_numeric(),threshold = .8)  ->
+  rec
+
+rec
+```
+
+We then use `prep()` to inspect our training data and workout the needed parameters for transforming variables.
+
+```{r Basic_ML_FeatureEngineering-19}
+rec=prep(rec, train)
+rec
+```
+
+Now that we have prepared our ingredients for our recipe, we can now apply this recipe to any similarly structured dataset we encounter.
+
+```{r Basic_ML_FeatureEngineering-20}
+train_clean = bake(rec, train)
+test_clean = bake(rec, train)
+
+ncol(test_clean)
+```
+
+There are *many* feature engineering steps you can add to a recipe and you even create your own. This is an ideal way to build a reusable data transformation for being able to translate not only data during the model development phase but dramatically shrinks the code necessary for making predictions in production.
+
+### Exercise
+1. Based a training split of `titanic3` data, prepare (one or more) transformation steps to get the data ready for modelling. Ideally, use `recipes` to help you prepare the data.

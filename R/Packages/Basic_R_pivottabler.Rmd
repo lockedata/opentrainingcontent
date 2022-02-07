@@ -1,0 +1,158 @@
+
+```{r Basic_R_pivottabler-1, include=FALSE, message=FALSE}
+library(pivottabler)
+```
+
+
+
+
+# pivottabler basics
+## About
+pivottabler was written by Chris Bailliss to make the production of pivot tables easier at Cancer Research UK.
+
+There are substantial [vignettes](https://github.com/cbailiss/pivottabler/tree/master/vignettes) that extend the content beyond this basic training.
+
+## Starting
+To start producing a pivot table you need to create a pivot table object.
+
+```{r Basic_R_pivottabler-2}
+library(pivottabler)
+pt <- PivotTable$new()
+```
+
+## Key methods
+You can then add to your object via a number of commands:
+
+- `addData` to attach a dataset
+- `addColumnDataGroups` to put produce summaries by this field across the columns
+- `addRowDataGroups` to put produce summaries by this field down the rows
+- `defineCalculation` to determine the aggregation
+
+## Using methods
+These are not functions, but things an object can do so they get called via a `$` after referencing the object.
+
+```{r Basic_R_pivottabler-3}
+pt$addData(iris)
+pt$addRowDataGroups("Species")
+pt$defineCalculation(calculationName = "Mean",
+                     summariseExpression = "mean(Sepal.Width)" )
+pt$renderPivot()
+```
+
+## Easy pivots
+With simple pivots an alternative can be used. There is a basic `qpvt`, a HTML rendering `qhpvt`, and a \LaTeX rendering `qlpvt`.
+
+```{r Basic_R_pivottabler-4}
+qhpvt(iris,"Species", calculations = "mean(Sepal.Width)")
+```
+
+## Groups
+- We need to provide string representations of fields that should be put in either the rows or columns of a pivot table.
+- Each additional command adds another level of depth to the rows or columns.
+- On the fly calculations of categories are not supported
+
+```{r Basic_R_pivottabler-5}
+iris2<-iris; iris2$Small<-iris2$Sepal.Width<mean(iris2$Sepal.Width)
+pt<-PivotTable$new()
+pt$addData(iris2)
+pt$addRowDataGroups("Species")
+pt$addRowDataGroups("Small")
+pt$renderPivot()
+```
+
+## Calculations
+- We need to provide string representations of calculations that work in either dplyr e.g. `n()` or data.table e.g. `.N`
+- Each additional command adds another calculation
+
+```{r Basic_R_pivottabler-6}
+pt$defineCalculation(calculationName = "Count", summariseExpression = "n()")
+pt$defineCalculation(calculationName = "Max_Sepal.Width", summariseExpression = "max(Sepal.Width)")
+pt$renderPivot()
+```
+
+## Exercises
+1. Construct a quick pivot that gives the count of cars in `mtcars` by the number of cylinders
+2. Construct a pivot that gives the average of the various sepal and petal attributes by species for `iris`
+
+# Render formats
+## Rendering
+pivottabler is designed to make good looking output tables in a variety of output formats.
+
+- `print()` to pretty print to console
+- `saveHtml()` to produce a standalone HTML file
+- `renderPivot()` to produce an inline HTML version
+- `getLatex()` to get the \LaTeX code
+- `asJSON()` to get a JSON representation (use `viewJSON()` to get an interactive HTML view of it)
+
+
+
+## Exercises
+1. Using `writeLines()` save a copy of the \LaTeX representation of one of your pivot tables to a ".tex" file
+1. Using `writeLines()` save a copy of the JSON representation of one of your pivot tables to a ".json" file
+1. Using pivottabler only, save a copy of the HTML representation of one of your pivot tables to a ".html" file
+
+# Style
+
+## Built-in themes
+```{r Basic_R_pivottabler-7}
+pt$theme <- "default"
+pt$renderPivot()
+```
+
+## Built-in themes
+```{r Basic_R_pivottabler-8}
+pt$theme <- "largeplain"
+pt$renderPivot()
+```
+
+## Built-in themes
+```{r Basic_R_pivottabler-9}
+pt$theme <- "compact"
+pt$renderPivot()
+```
+
+## Making a theme
+```{r Basic_R_pivottabler-10}
+locke <- list(
+  headerBackgroundColor = "rgb(33, 101, 182)",
+  headerColor = "rgb(255, 255, 255)",
+  cellBackgroundColor = "rgb(255, 255, 255)",
+  cellColor = "rgb(77, 77, 77)")
+theme <- getSimpleColoredTheme(pt, "Locke",colors=locke, fontName="Roboto, Arial")
+pt$theme<-theme
+pt$renderPivot()
+```
+
+## Adding specific styles
+- To start styling a pivot table you need to create a pivot style object based off an existing pivot table.
+- Use CSS attributes and values in a list
+- Determine what cells to apply the style to
+- Apply the style to the cells
+
+## Adding specific styles
+```{r Basic_R_pivottabler-11}
+s <- PivotStyle$new(pt, styleName="cellHighlight", declarations=list("color"="red"))
+g <- pt$getCells(specifyCellsAsList=TRUE, columnNumbers=2)
+gc <- lapply(g, function(cell) {cell$style <- s})
+pt$renderPivot()
+```
+## Adding specific styles
+Identify cells to apply styles to with the following methods:
+
+- `getCells()` for specifying by range / location
+- `findCells()` for specifying by criteria
+- `findColumnDataGroups()` for specifying column labels 
+- `findRowDataGroups()` for specifying row labels 
+
+## Conditional formatting
+Can use `findCells()` with some conditions to apply a style
+
+```{r Basic_R_pivottabler-12}
+s <- PivotStyle$new(pt, styleName="cellHighlight", declarations=list("color"="blue"))
+g <- pt$findCells(minValue=2, maxValue = 3.5)
+gc <- lapply(g, function(cell) {cell$style <- s})
+pt$renderPivot()
+```
+
+## Exercise
+1. Add a conditional format to your average values by species where values are less than 3

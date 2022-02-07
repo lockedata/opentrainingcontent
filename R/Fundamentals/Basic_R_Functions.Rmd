@@ -1,0 +1,232 @@
+# (PART) Portable code {-}
+# Making functions
+
+```{r Basic_R_Functions-1, include=FALSE}
+library(tidyverse)
+```
+
+
+## Anatomy of a function
+### Functions
+Functions are bundled code that has some or all of the optional components:
+
+- Inputs
+- Outputs
+- Side effects
+
+### Inputs
+Inputs are arguments that you pass into a function.
+
+```{r Basic_R_Functions-2}
+inputsEx<-function(x,y){}
+inputsEx(1,2)
+```
+
+### Outputs
+The function's output is the object the function returns. It's usually a transformation of the input(s) in some way.
+
+```{r Basic_R_Functions-3}
+outputsEx<-function(x){
+  result<-x*2
+  return(result)
+}
+outputsEx(3)
+```
+
+### Side effects
+These are things that happen but are not part of the output. Generally you should avoid doing this so that everything that happens in the fufnction, stays in the function.
+
+```{r Basic_R_Functions-4}
+sideffectsEx<-function(x){
+  result<-x*2
+  plot(x,result)
+  return(result)
+}
+sideffectsEx(1:10)
+```
+
+### tidyverse
+We can also write functions in the tidyverse paradigm for compact code.
+```{r Basic_R_Functions-5}
+outputsEx<-rlang::as_function(~ .*2)
+outputsEx(3)
+```
+
+### Exercises
+1. Write a function that calculates the area of circles given the radius as the input argument
+
+## Arguments
+### Mandatory arguments
+Arguments that don't get provided with a default value in the definition are mandatory.
+
+```{r Basic_R_Functions-6}
+argsEx<-function(x, y=2){
+  return(x*y)
+}
+argsEx(2)
+argsEx(2,3)
+```
+
+### Arguments with a defined set of values
+```{r Basic_R_Functions-7, error=TRUE}
+argsSubsetEx<-function(x){
+  x<-match.arg(x,c("red","green","blue"))
+  return(x)
+}
+argsSubsetEx("red")
+argsSubsetEx("Red")
+```
+
+### Arguments to provide a function
+```{r Basic_R_Functions-8}
+argsFunctionEx<-function(func,x){
+  func<-match.fun(func)
+  return(func(x))
+}
+argsFunctionEx("mean", 1:10)
+```
+
+### Arbitrary arguments
+The ellipsis (`...`) is used to allow the function user to put in any number of arguments - these might be used by the core code, or they could be passed into functions called within the function.
+
+```{r Basic_R_Functions-9}
+ellipsisEx1<-function(...){
+  args<-list(...)
+  return(args)
+}
+ellipsisEx1(LETTERS,1:5)
+```
+
+### Arbitrary arguments
+```{r Basic_R_Functions-10}
+ellipsisEx2<-function(x, ...){
+  smallest<-pmin(...)
+  return(x*smallest)
+}
+ellipsisEx2(5,1,2,3)
+ellipsisEx2(8,3:10,10:3)
+```
+
+### Exercises
+1. Write a function that takes some strings and will upper or lower case them. Only allow upcase or lower casing.
+2. Write a function that returns the number of arbitrary arguments passed into itself
+
+## Documentation
+### Roxygen
+R has a documentation system for functions and packages. When we write a function, especially a complex one, we should add some documentation to make it easier to understand.
+
+Get a roxygen skeleton by being in the function definition and pressing ctrl+shift+alt+r
+
+### Basic documentation
+```{r Basic_R_Functions-11}
+#' Title
+#'
+#' @param func 
+#' @param x 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+argsFunctionEx<-function(func,x){
+  func<-match.fun(func)
+  return(func(x))
+}
+```
+
+### Basic documentation
+```{r Basic_R_Functions-12}
+#' Perform any function on any single input
+#'
+#' @param func The name of a function as a string
+#' @param x The input to be provided in the first position to the function
+#'
+#' @return The evaluated results of func(x)
+#' @export
+#'
+#' @examples
+#' argsFunctionEx(tolower, LETTERS)
+argsFunctionEx<-function(func,x){
+  func<-match.fun(func)
+  return(func(x))
+}
+```
+
+### Exercises
+1. Document the functions you've written so far
+
+## Error handling
+
+### Providing information to the user
+There are different "severities" of text you can provide back to the user of a function:
+
+- message
+- warning
+- error
+
+### Messages
+Designed to provide information that might be helpful but doesn't say there's a problem.
+
+```{r Basic_R_Functions-13}
+messageEx<-function(x){
+  message("Life is good!")
+  x
+}
+messageEx(5)
+```
+
+### Warnings
+Designed to let the user know that the function output might not be what they expect.
+
+```{r Basic_R_Functions-14}
+warningsEx<-function(x){
+  if(sum(is.na(x))) warning("Some NAs in the data - results might not match expectations")
+  mean<- sum(x, na.rm=TRUE) / length(x)
+  return(mean)
+}
+warningsEx(c(1:10, NA))
+```
+
+### Errors
+When something means the function cannot return a result, you should make the function return an informative error.
+
+```{r Basic_R_Functions-15, error=TRUE}
+stopEx<-function(x, y){
+  if(all.equal(y,0)) stop("y is 0")
+  return(x/y)
+}
+stopEx(1,2)
+stopEx(1,0)
+```
+
+### Handling unexpected inputs
+We can check the types or ranges of input values by applying assertions that have to be passed in order for the function to execute.
+
+```{r Basic_R_Functions-16, error=TRUE}
+stopifnotEx<-function(x){
+  stopifnot(is.numeric(x), x>10, x<20)
+  return(x)
+}
+stopifnotEx("A")
+stopifnotEx(10)
+```
+
+### Code that can fail
+Some code could error for one reason or another. You might want the function to return a success any way or do something different in the event of an error.
+
+```{r Basic_R_Functions-17}
+tryEx<-function(x,y){
+  tryCatch({x/y},
+           error=function(e){
+             message("Check your y")
+             })
+}
+tryEx(1,"A")
+tryEx(1,2)
+```
+
+### Exercises
+1. Write a function that adds together the square root of two arguments. 
+2. Add a message that return the result rounded to 2 decimal places
+2. Add a warning if either argumenet is NA
+3. Add a check step that will throw an error if either argument is not numeric

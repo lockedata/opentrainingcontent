@@ -1,0 +1,86 @@
+# Shiny Best Practices
+
+## Configuration
+
+The [`config`](https://github.com/rstudio/config) package can be used to specify database connections and important variables for different environments.
+
+These can be specified in a `config.yml` file that can be retrieved via `config::get(file="config.yml")`
+
+```yaml
+default:
+  aad_url: "https://localhost"
+
+test:
+  aad_url: "https://localhost/test"
+  
+production:
+  aad_url: "https://localhost/prod"
+```
+
+The list object is then accessible for use in the application.
+
+## Cache plots
+Shiny can store plots for rapid retrieval later. 
+
+Use the `renderCachedPlots()` function instead of `renderPlots()` to cache data. When you cache plots, you'll need to identify the differentiating inputs for caching.
+
+```r
+function(input, output) {
+  renderCachedPlot(
+    {
+      rownums <- seq_len(input$n)
+      plot(cars$speed[rownums], cars$dist[rownums])
+    },
+    cacheKeyExpr = { input$n }
+  )
+}
+```
+
+To persist this cache for use across multiple users and R threads, we can set options at either the application level or the plot level.
+
+```r
+shinyOptions(cache = diskCache(file.path(dirname(tempdir()), "myapp-cache")))
+```
+
+## Async programming
+Shiny works by sending commands to R and waiting for responses. This means that the frontend gets tied up waiting for responses, making it more difficult for others to use the app at the same time.
+
+We can use the [`promises`](https://rstudio.github.io/promises/articles/shiny.html) package to implement asynchronous programming in Shiny. 
+
+- Load `promises` and `future` as libraries
+- Specify the parallelisation backend - `multiprocess` works on both Windows and *nix 
+- Wrap operations that are long running in `future()` from the `future` package
+- Use the `%...>%` operator instead of `%>%` in pipelines to make the process asynchronous
+- Use the `render*()` functions you're used to. NB Not all extension packages will be compatible.
+
+```r
+library(promises)
+library(future)
+plan(multiprocess)
+
+function(input, output, session) {
+  output$plot <- renderPlot({
+    future({ expensive_operation() }) %...>%
+      head(input$n) %...>%
+      plot()
+  })
+}
+```
+
+Async processes can be potentially tricky inside reactive expressions as it can cause scope-related errors. Try to make every process in a chain relying on an async reactive an async pipeline.
+
+```r
+function(input, output, session) {
+  data <- eventReactive(input$refresh_data, {
+    future({ read.csv(url) })
+  })
+  
+  filteredData <- reactive({
+    data() %...>% filter(date == input$date)
+  })
+  
+  output$table <- renderTable({
+    filteredData() %...>% head(5)
+  })
+}
+```

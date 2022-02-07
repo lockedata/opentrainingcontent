@@ -1,0 +1,123 @@
+# shinytest
+
+The [shinytest](https://rstudio.github.io/shinytest/index.html) package provides tools for creating and running automated tests on Shiny applications.
+
+Shinytest uses snapshot-based testing strategy. The first time it runs a set of tests for an application, it performs some scripted interactions with the app and takes one or more snapshots of the application's state. These snapshots are saved to disk so that future runs of the tests can compare their results to them.
+
+There are three separate components involved in running the tests:
+
+1. First is the **test driver**. This is the R process that coordinates the testing and controls the web browser. When working on creating tests interactively, this is the R process that you use.
+
+1. Next is the **Shiny process**, also known as the **server**. This is the R process that runs the target Shiny application.
+
+1. Finally, there is the **web browser**, also known as the **client**, which connects to the server. This is a headless web browser -- one which renders the web page internally, but doesn't display the content to the screen ([PhantomJS](http://phantomjs.org/)).
+
+## Test creation
+To create tests, the easiest method is to use the `recordTest()` function. This launches the application in a web browser and records your interactions with the application. These interactions are saved in a .R file, and are run using the strategy described above.
+
+* Run `recordTest()` to launch the app in a test recorder.
+* Create the tests by interacting with the application and telling the recorder to snapshot the state at various points.
+* Quit the test recorder. When you do this, three things will happen:
+  * The test script will be saved in a .R file in a subdirectory of the application named `tests/`.
+  * If you are running in the RStudio IDE, it will automatically open this file in the editor.
+  * The test script will be run, and the snapshots will be saved in a subdirectory of the `tests/` directory.
+
+To record tests, run the following:
+
+```{r eval=FALSE}
+library(shinytest)
+recordTest("sampleapp")
+```
+
+This will launch the app along with a utility pane for managing the recording activities. 
+
+When you are done recording a sequence of events, click on the "Save script and exit test event recorder" button. If you are in the RStudio IDE, it will open the test script in the `tests/` subdirectory of the application. In this case, the name of the script is `mytest.R`:
+
+```{r eval=FALSE}
+app <- ShinyDriver$new("..")
+app$snapshotInit("mytest")
+app$snapshot()
+app$setInputs(checkGroup = c("1", "2"))
+app$setInputs(checkGroup = c("1", "2", "3"))
+app$setInputs(action = "click")
+app$snapshot()
+```
+
+### Manual test development
+You can create and edit test scripts without using the GUI.
+
+Each script has initialisation, interactions, and snapshots. 
+
+- Initialization: creates a new ShinyDriver object and give it a name
+- Interactions: defines some actions to be taken with the application
+- Snapshots: take images of the application at different points
+
+```{r eval=FALSE, tidy=FALSE}
+# Initialize a ShinyDriver object using the app in the test script's parent
+# directory
+app <- ShinyDriver$new("..")
+app$snapshotInit("mytest")
+# Next, it defines some interactions with the application and takes snapshots.
+app$setInputs(checkGroup = c("1", "2"))
+app$setInputs(checkGroup = c("1", "2", "3"))
+app$setInputs(action = "click")
+# Take a snapshot to be tested
+app$snapshot()
+app$setInputs(action = "click")
+app$snapshot()
+```
+
+## Test execution
+When you quit the test recorder, it will automatically run the test script. You can also run the tests, from R and run a specific test or all tests. 
+
+```{r eval=FALSE}
+testApp("myshinyapp", "mytest")
+testApp("myshinyapp")
+```
+
+If there are any differences between the current and expected results, you'll see output like this:
+
+```
+Running mytest.R 
+====== Comparing mytest ...
+  Differences detected between mytest-current/ and mytest-expected/:
+    Name         Status      
+    001.json  != Files differ
+    001.png   != Files differ
+Would you like to view the differences between expected and current results [y/n]? 
+```
+
+You can then view the differences between the expected and current results. For screenshots, the differences will be highlighted in red. You can choose to update the expected results, or to just quit without updating. You should update the results if the changes are expected. You should quit without updating if the changes are unexpected.
+
+## Automatically testing shiny apps
+To include `shinytest` tests inside a unit testing framework we need to make a `testthat` test script called `run_tests.R`. We may need to set `compareImages=FALSE` if we get problems with images differing due to operating systems on which they're generated.
+
+```{r eval=FALSE}
+library(testthat)
+library(shinytest)
+
+test_that("Application works", {
+  expect_pass(testApp("."))
+})
+```
+
+With this, any continuous integration (CI) processes can execute our test suite. Often we will need to make sure that Phantom.JS is installed in the CI environment. [Guidance](https://github.com/Medium/phantomjs#continuous-integration) from Medium on instaling Phantom.JS suggests an install script like:
+
+```yaml
+cache:
+  directories:
+    - travis_phantomjs
+
+before_install:
+  # Upgrade PhantomJS to v2.1.1.
+  - "export PHANTOMJS_VERSION=2.1.1"
+  - "export PATH=$PWD/travis_phantomjs/phantomjs-$PHANTOMJS_VERSION-linux-x86_64/bin:$PATH"
+  - "if [ $(phantomjs --version) != $PHANTOMJS_VERSION ]; then rm -rf $PWD/travis_phantomjs; mkdir -p $PWD/travis_phantomjs; fi"
+  - "if [ $(phantomjs --version) != $PHANTOMJS_VERSION ]; then wget https://github.com/Medium/phantomjs/releases/download/v$PHANTOMJS_VERSION/phantomjs-$PHANTOMJS_VERSION-linux-x86_64.tar.bz2 -O $PWD/travis_phantomjs/phantomjs-$PHANTOMJS_VERSION-linux-x86_64.tar.bz2; fi"
+  - "if [ $(phantomjs --version) != $PHANTOMJS_VERSION ]; then tar -xvf $PWD/travis_phantomjs/phantomjs-$PHANTOMJS_VERSION-linux-x86_64.tar.bz2 -C $PWD/travis_phantomjs; fi"
+  - "phantomjs --version"
+```
+
+## Exercises
+Build a shinytest for a sample shiny app.
+

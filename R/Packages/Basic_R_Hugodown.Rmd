@@ -1,0 +1,10 @@
+# {hugodown} (Experimental!)
+
+[{hugodown}](https://hugodown.r-lib.org/) is an early stage replacement to {blogdown} that helps support a workflow where local or CI/CD builds process only .Rmd files that have changed and outputs them into .md files in the content directory for Hugo to then convert into pages. This process gives {hugodown} the advantage of caching older content and reducing the workload during times like theme upgrades.
+
+## Get started with {hugodown}
+
+1. Install via `remotes::install_github("r-lib/hugodown")`
+2. Create a post archetype e.g. archetypes/blog/index.Rmd which includes `output: hugodown::md_document` in the YAML
+3. Use `hugodown::start()` to make spin up Hugo and watch the repo
+4. Add new content using `hugodown::use_post()`

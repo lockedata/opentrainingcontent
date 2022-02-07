@@ -1,0 +1,60 @@
+# rcpp
+
+## Purpose
+Run C++ code in R for faster calculations.
+
+## Requirements
+- `Rcpp` required
+- `RcppArmadillo` recommended
+
+```{r Basic_R_rcpp-1}
+library(Rcpp)
+```
+
+## Basics
+
+Create functions in-line with `cppFunction()`
+```{r Basic_R_rcpp-2}
+cppFunction(
+"double cumulative_interest(double pv, float r, int p){
+  double CI=pv*pow((1+r),p) - pv;
+  return(CI);
+            }")
+
+cumulative_interest(100,.05,5)
+```
+
+A C++ function using `cppFunction()` requires:
+
+- an output datatype
+- a function name
+- inputs with data types
+- a body of code inside `{}`
+    + code lines ended by `;`
+    + a return statement
+
+Functions with responses like `int` and `double` are not vectorised.
+
+```{r Basic_R_rcpp-3, error=TRUE}
+cumulative_interest(c(10,100),c(.1,.01),2)
+```
+
+To perform calculations that appear vectorised you need to provide vector inputs and outputs. Many operations have a vectorised capability so we don't have to write for loops.
+
+```{r Basic_R_rcpp-4, error=TRUE}
+cppFunction("DoubleVector  cumulative_interest2(DoubleVector pv, DoubleVector r, int p){
+  return(pv*pow(1+r, p) - pv);
+  }")
+
+cumulative_interest2(c(10,100),c(.1,.01),2)
+```
+
+You can create files of C++ code and have anifty development experience in RStudio. You can then `sourceCpp()` or keep the fiels in a package.
+
+## Exercise
+1. Write a function that calculates the future value of an investment given an interest rate and a number of periods.
+
+## Next steps
+1. Read [Hadley's Rcpp tutorial](http://adv-r.had.co.nz/Rcpp.html)
+2. Read [RStudio's page on Rcpp](https://support.rstudio.com/hc/en-us/articles/200486088-Using-Rcpp-with-RStudio)
+3. Check out a recent [Rcpp workshop from Dirk](http://past.rinfinance.com/agenda/2017/workshop/DirkEddelbuettel.pdf)

@@ -1,0 +1,295 @@
+
+# The tidyverse
+A collection of R packages designed to be consistent, clean interfaces to working with data in R.
+
+The "tidyverse" was born from the "Hadleyverse". Hadley Whickham wrote some of the most widely adopted packages that are now in the tidyverse. 
+
+![](https://raw.githubusercontent.com/tidyverse/tidyverse/master/docs/logo.png)
+
+## Pipes
+One of the most radical parts of the tidyverse that isn't part of base R is the concept of "piping", which was first introduced in [magrittr](https://cran.r-project.org/package=magrittr)
+
+```{r Basic_R_DataManip-1}
+mean(iris$Sepal.Width[iris$Species=="setosa"]*iris$Sepal.Length[iris$Species=="setosa"])
+
+library(tidyverse)
+iris %>% 
+  filter(Species == "setosa") %>% 
+  summarise(mean(Sepal.Width*Sepal.Length))
+```
+
+Use ctrl+shift+m to easily get this operator.
+
+## Variable assignment
+Normally with R, we use the left-hand side (LHS) assignment operator (`<-`) but when we use pipelines we tend to use the right-hand side (RHS) assignment operator (`->`).
+
+```{r Basic_R_DataManip-2}
+setosas <- iris[iris$Species=="setosa",]
+
+iris %>% 
+  filter(Species == "setosa") ->
+  setosas
+```
+
+## Data positions
+Pipelines work by passing the output of a function into the first argument in a function. Unfortunately, old R functions don't always adhere to this data first approach. We can use a `.` to specify where our data should go in such cases.
+
+```{r Basic_R_DataManip-3}
+iris %>% 
+  lm(Sepal.Length ~ Sepal.Width, data=.)
+```
+
+
+## Exercises
+1. Build a pipeline that gets the column names from `iris`, then upper-cases them;
+2. Build a pipeline that takes the `LETTERS` variable and uses `sub()` to replace `S` with `Z`, store this as a new variable called `LETTERZ`.
+
+
+# Filtering
+The function we use to conditionally select rows from our data.frames is `filter()`. Comma seperate conditions to get an `AND` effect. Use the standard logical operators to get an alternative combination of conditions.
+
+```{r Basic_R_DataManip-4}
+iris %>% 
+  filter(Species=="virginica") %>% 
+  nrow()
+
+iris %>% 
+  filter (Species == "virginica", Sepal.Length > mean(Sepal.Length)) %>% 
+  nrow()
+
+iris %>% 
+  filter (Species == "virginica" | Sepal.Length > mean(Sepal.Length)) %>% 
+  nrow()
+```
+
+## Exercises
+1. Write a filter that gets all rows from `iris` where an attribute of the sepal is smaller than average;
+2. Write a filter that removes setosa irises from the iris dataset.
+
+# Select
+We can specify a combination of columns and some useful helper functions to do selects of columns.
+
+```{r Basic_R_DataManip-5}
+iris %>% 
+  select(Species, Sepal.Length) %>% 
+  colnames()
+
+iris %>% 
+  select(-Species) %>% 
+  colnames()
+
+iris %>% 
+  select(Sepal.Width:Petal.Width) %>% 
+  colnames()
+```
+
+
+## Select - helper functions
+
+```{r Basic_R_DataManip-6}
+iris %>% 
+  select(starts_with("S")) %>% 
+  colnames()
+
+iris %>% 
+  select(ends_with("s")) %>% 
+  colnames()
+
+iris %>% 
+  select(contains("Length")) %>% 
+  colnames()
+```
+
+
+## Exercises
+1. Write a `select()` that gets all the columns from iris starting with "S";
+2. Write a `select()` that gets all the columns from iris starting with "P" at the beginning of the `data.frame` and the other columns after them. *Hint - read `?select_helpers`*.
+
+## Select - Stretch content!
+### Select - conditionally
+You can also select columns based on the outcomes of functions applied to the data in the columns.
+
+```{r Basic_R_DataManip-7}
+iris %>% 
+  select_if(is.numeric) %>% 
+  colnames()
+```
+
+You can also perform a column name change as you go!
+```{r Basic_R_DataManip-8}
+iris %>% 
+  select_if(is.numeric, tolower) %>% 
+  colnames()
+```
+
+### Exercises
+1. Write a `select()` that gets all the character columns from iris and upper-cases the column names.
+ 
+# Mutate
+We can use mutate to add and/or update columns. Unless you do an assignment back to the original object, it doesn't make any changes.
+
+```{r Basic_R_DataManip-9}
+iris %>% 
+  mutate(Sepal.Area = Sepal.Width * Sepal.Length, 
+  Avg.Sepal.Area = mean(Sepal.Width)) %>% 
+  head()
+```
+
+## Exercises
+1. Create an `irisImperial` with the numeric measurements converted to inches, and the Species upper-cased.
+
+## Mutate - Stretch content
+
+### Functions
+We can create ad-hoc functions inside our pipelines! When we're making pretty simple functions, we can use the tidyverse way: A tidyverse function starts with a `~` and uses our `.` to denote where the input value should go. If we want to make the function reusable, we can assign it to a variable.
+
+```{r Basic_R_DataManip-10}
+convertToFahrenheit <- as_function(~ (. - 32) * (5/9))
+convertToFahrenheit(c(32,101))
+```
+
+
+### Mutate - conditionally
+You can also use some conditional functions to change multiple columns at once and we can use our `~` functions to do custom changes.
+
+```{r Basic_R_DataManip-11}
+iris %>% 
+  mutate_if(is.numeric, ~ . + rnorm(.)) %>% 
+  head()
+```
+
+### Exercises
+1. Redo your `irisImperial` code using `mutate_if` functions.
+
+# Aggregation
+To aggregate in our pipelines, we can uses the `summarise()` function.
+
+```{r Basic_R_DataManip-12}
+iris %>% 
+  summarise(MeanSepalWidth=mean(Sepal.Width),
+  MeanSepalLength=mean(Sepal.Length))
+```
+
+## Exercises
+1. Find the min and max values for `Petal.Length`.
+
+## Aggregations - stretch content
+### Aggregations - conditionally
+You can perform aggregations on all columns meeting a criteria
+```{r Basic_R_DataManip-13}
+iris %>%
+  summarise_if(is.numeric, mean)
+```
+
+### Exercises
+1. Get the range for each numeric variable in `iris`. Hint: Range outputs two values so you need to make a custom function that will concatenate the outputs of range.
+
+
+# Grouping
+We can group by columns using the `group_by()` function but it doesn't make a practical difference until we perform an operation after it. Actions like summarising will work within each group then.
+
+```{r Basic_R_DataManip-14}
+iris %>% 
+  group_by(Species) %>% 
+  summarise(AvgSepalLength=mean(Sepal.Length))
+```
+
+## Grouping
+Grouping can also be useful for getting within-group measures.
+```{r Basic_R_DataManip-15}
+iris %>% 
+  group_by(Species) %>% 
+  mutate(TotalLengths=cumsum(Sepal.Length)) %>% 
+  slice(c(1,50,51,100,101,150))
+```
+
+## Exercises
+1. In a pipeline, group by species, and then add a column that provides the average `Petal.Width`.
+
+## Grouping - stretch content
+### Grouping - conditionally
+We can also do grouping conditionally!
+
+```{r Basic_R_DataManip-16}
+iris %>% 
+  group_by_if(is.factor) %>% 
+  summarise_all(mean)
+```
+
+### Exercises
+1. In a pipeline, add a column that provides a flag for whether the `Sepal.Length` is below average, group by species and this below-average flag, and get the maximum values for all numeric columns.
+
+# Reshaping
+##  Wide or tall?
+If your data is wide you have a row per observation with many measurements as columns. If your data is tall you have one row per observation's measurement.
+
+## From wide to tall
+To go from wide to tall, we can use the `gather()` function.
+
+```{r Basic_R_DataManip-17}
+iris %>% 
+  mutate(flower=row_number()) %>% 
+  gather(measure,value,-flower) ->
+  irisLong
+```
+
+## From tall to wide
+To go from tall to wide, we use the `spread()` function.
+```{r Basic_R_DataManip-18}
+irisLong %>% 
+  spread(measure, value) %>% 
+  nrow()
+```
+
+## Exercise
+1. Convert the `who` dataset from wide to tall;
+2. Convert the `population` dataset from tall to wide.
+
+## Reshaping - stretch content
+
+### Splitting out variables
+Sometimes multiple pieces of information are stored in a single value. We can use `seperate()` to split these into seperate columns.
+```{r Basic_R_DataManip-19}
+who %>% 
+  select(-starts_with("newrel")) %>% 
+  gather(measure, value, -(country:year),na.rm = TRUE) %>% 
+  separate(measure,c("fact","measure","genderage")) %>% 
+  head()
+```
+
+### Exercises
+1. By reading the documentation for `separate()`, seperate out as much info as possible.
+
+# Joining
+
+## Joins
+Different types of joins are:
+
+- **inner join** for getting only rows matched on both sides;
+- **left join** for getting all the rows on the laft hand side with any matching data from the right;
+- **full join** for getting all the rows on the left and the right with rows matched where possible;
+- **anti join** for getting everything on the left where there's no match on the right;
+- **cross join** for getting every row on the left joined against every row on the right.
+
+## Join syntax
+When we join with pipes we need to know what we're joining, whether we can rely on doing that by name matching, and, if not, what fields we need to join by.
+
+```{r Basic_R_DataManip-20}
+irisLk<-data_frame(species=c("setosa","virginica","VERSICOLOR"),
+                   colour=c("Red","Blue","Green"))
+iris %>% 
+  left_join(irisLk, by=c("Species"="species")) %>% 
+  dim()
+```
+
+## Joins
+```{r Basic_R_DataManip-21, message=FALSE}
+irisLk<-data_frame(Species=c("setosa","virginica","VERSICOLOR"),
+                   colour=c("Red","Blue","Green"))
+
+iris %>% left_join(irisLk) %>% dim()
+
+iris %>% inner_join(irisLk) %>% dim()
+
+iris %>% full_join(irisLk) %>% dim()
+```
