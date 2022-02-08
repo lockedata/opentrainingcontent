@@ -1,0 +1,61 @@
+# Introduction {#intro}
+
+
+This is an introductory Python course that will be focus on the basic syntax and on the package NumPy. To follow this course no particular prerequisites are needed
+
+## Python
+
+Python is a popular programming language for general-purpose programming. It is used for software development, mathematics, scripting and of course for data science, which is the aim of this course. Python was developed by Guido van Rossman and it was first release in 1991. This book will go trough basic functionality such variables, lists, strings and it will give an overview of NumPy, which is a library mostly for array and mathematical operations. Python is open source and has many version, here we will use Python 3.x.
+
+Python can be run by shell as shown in Figure \@ref(fig:shell)
+
+```{r shell, echo=FALSE, fig.cap='Python shell'}
+
+knitr::include_graphics(rep("images/python_shell.png"))
+```
+
+Python can run also using ipython which is an interactive shell shown in Figure \@ref(fig:ishell).
+
+```{r ishell, echo=FALSE, fig.cap='iPython shell'}
+
+knitr::include_graphics(rep("images/ipython_shell.png"))
+```
+
+It is also possible to use jupyter notebook (http://jupyter.org), which is a web-interface for interactive python (Figure \@ref(fig:jupy)).
+
+```{r jupy, echo=FALSE, fig.cap='Jupyter notebook'}
+
+knitr::include_graphics(rep("images/jupyter_notebook.png"))
+```
+
+There are several IDEs for programming with Python, but explore them is not the subject of this course.
+
+Example of python code; python can be used as calculator.
+```{python, prompt = TRUE, comment=NA, highlight= TRUE}
+# This is a comment
+print(5+2)
+print(5-2)
+print(5*2)
+print(5/2)
+```
+
+
+<!-- You can label chapter and section titles using `{#label}` after them, e.g., we can reference Chapter \@ref(intro). If you do not manually label them, there will be automatic labels anyway, e.g., Chapter \@ref(methods). -->
+
+<!-- Figures and tables with captions will be placed in `figure` and `table` environments, respectively. -->
+
+<!--```{r nice-fig, fig.cap='Here is a nice figure!', out.width='80%', fig.asp=.75, fig.align='center'}
+par(mar = c(4, 4, .1, .1))
+plot(pressure, type = 'b', pch = 19)
+```
+-->
+<!-- Reference a figure by its code chunk label with the `fig:` prefix, e.g., see Figure \@ref(fig:nice-fig). Similarly, you can reference tables generated from `knitr::kable()`, e.g., see Table \@ref(tab:nice-tab). -->
+
+<!-- ```{r nice-tab, tidy=FALSE} -->
+<!-- knitr::kable( -->
+<!--   head(iris, 20), caption = 'Here is a nice table!', -->
+<!--   booktabs = TRUE -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- You can write citations, too. For example, we are using the **bookdown** package [@R-bookdown] in this sample book, which was built on top of R Markdown and **knitr** [@xie2015]. -->

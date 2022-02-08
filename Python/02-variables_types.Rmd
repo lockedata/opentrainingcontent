@@ -1,0 +1,198 @@
+# Variables and Types
+
+## Variables
+
+Variables are specific case-sensitive name, which are a reserved memory location to store values, and help you to make your code reproducible. The value will be call up through the variable name, which is assigned using the equal sign (=). Below some example of how to create variables.
+
+```{python, echo = TRUE, prompt = TRUE, comment=NA}
+# create variables 
+a = 2        ## integer
+b = 2.4      ## floating point
+fruit = 'apple'  ## This is a string of character
+```
+
+It is possible to carry out mathematical operation using the name of the variables previously declared. For example we can create a new variable that store the results from the division of two variables a and b.
+
+```{python, echo = TRUE, prompt = TRUE, comment=NA}
+c = a/b
+print(c)
+```
+
+## Slice operator [ ] {#slice}
+
+The slice operator is used to select multiple elements from a string, list or array. It use the index i starting from 0, i\_{start} and i\_{end} are the range of indices for the selection of the elements. Can be possible to select the elements as:
+
+- [ i ], select the element corresponding to the index i.
+
+- [ i\_{start}:i\_{end} ], select the elements from i\_{start} through i\_{end} - 1 . 
+
+- [ i\_{start}: ],select all the elements from i\_{start} to the end of the array
+
+- [ :i\_{end} ], select all the elements from the start to the i\_{end} - 1
+
+- [ : ], select the elements from start to end, without specifying the starting and ending indices.
+
+If the i_start is not specified, Python will slice starting from the beginning of the list. If i_end is not specified, python will slice all the way to the last element of the list.
+We will see in this chapter how to use this operator for strings and lists and later also for arrays.
+
+## Types
+
+In the previous paragraph we defined the variables a and b, if now we print the type of each of them we could see that a is an integer (int type)  and b if a floating point (float) variables.
+The type in Python is sets based on the value that is assigned to the variable.
+
+```{python, echo = TRUE, prompt = TRUE, comment=NA}
+print(type(a))
+```
+```{python, echo = TRUE, prompt = TRUE, comment=NA}
+print(type(b))
+```
+
+Python has five standard data type, which are: 
+
+- Numbers
+
+- Strings
+
+- List
+
+- Tuple
+
+- Dictionary
+
+Only numbers, strings ans lists will be covered in this introductory course.
+
+### Numbers
+
+In the previous example we show that a = 2 is a numeric variable with type int. In the table \@ref(tab:table1) below is presented the numeric types. There are certain circumstances where is necessary to specify the correct number type for the variables (as for example for octal).
+
+```{r table1, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+table <- "
+Type     |Format         |Description                                       
+         |               |                                                  
+ int     |   a = 10      |  Signed integer                                  
+ long    |   a = 345L    |  (L) Long integers, also represented in octal and hexadecimal
+ float   |   a = 45.67   |  (.) Floating point real values                  
+ complex |   a = 3.14J   |  (J) Contains integer in the range to 0 and 255."
+
+df <- read.delim(textConnection(table),header=FALSE,sep="|",strip.white=TRUE,stringsAsFactors=FALSE)
+names(df) <- unname(as.list(df[1,])) # put headers on
+df <- df[-1,] # remove first row
+row.names(df)<-NULL
+knitr::kable(df, format = "html", caption=" Numeric types")
+
+```
+
+
+
+### Strings
+
+Strings are identified as a contiguous set of characters represented in quotation mark, which can represent text. To extract or subset a string is used the operator slice ([ ] and [ : ]) explained in section \@ref(slice).
+The strings are concatenated using + and * is the repetition operator.
+
+```{python, prompt = TRUE, comment=NA}
+string = 'I learn python'
+print(string)
+```
+
+The principal string operations are:
+
+-    '*' for repetition 
+
+-    '+' for concatenation
+
+-   [ i\_{start}:i\_{end} ] to slice the string. The index start at 0
+
+Repetition and concatenation of strings.
+```{python, prompt = TRUE, comment=NA}
+print(string * 2)                      # print string two times
+print(string + ' for data science')    # add new string to the previous one.
+```
+
+Operation with the slice operator.
+Print the character at index 0, which is the first character.
+
+```{python, prompt = TRUE, comment=NA}
+print(string[0])                      
+```
+
+Print the character from index 1 to 3.
+```{python, prompt = TRUE, comment=NA}
+print(string[1:4])
+```
+
+
+Print the string from second character.
+```{python, prompt = TRUE, comment=NA}
+print(string[1:])                   
+```
+
+There are other operation to extract or modify feature inside the string, the methods.
+
+Change all the character to uppercase.
+```{python, prompt = TRUE, comment=NA}
+print(string.upper())           
+```
+
+Change all the character to lowercase.
+```{python, prompt = TRUE, comment=NA}
+print(string.lower())           
+```
+
+Count the character of a string
+```{python, prompt = TRUE, comment=NA}
+print(string.count('n'))        
+```
+
+Replace elements into a string.
+```{python, prompt = TRUE, comment=NA}
+print(string.replace('e', 'i')) 
+```
+
+Strip all white spaces, from the beginning to the end.
+```{python, prompt = TRUE, comment=NA}
+print(string.strip())         
+```
+
+
+
+
+## Bool
+
+Another type is for Boolean variables which take only two values 'TRUE' and 'FALSE'.
+```{python, prompt = TRUE, comment=NA}
+print(bool(a))
+
+```
+
+
+## Conversion of types variable: Casting
+
+Usually Python make the variable type conversion when necessary. There are cases when you can also modify the type of a variable or do you want to specify a type on to a variables. This can be performed using the casting, which use the construction functions:
+
+- int() - construct an integer number from an integer, float of a string.
+
+- float() - construct a float number from an integer, a float or a string.
+
+- string() - construct a string from strings, integers and floats variables.
+
+
+The casting is shown in the examples below.
+
+Convert integer to string.
+```{python, echo = TRUE, prompt = TRUE, comment=NA}
+print("{}".format(str(a)))
+```
+
+Convert floating point to integer.
+```{python, echo = TRUE, prompt = TRUE, comment=NA}
+print(int(b))
+```
+
+Convert integer to float and select the format of decimals.
+```{python, echo = TRUE, prompt = TRUE, comment=NA}
+# Convert variable to float()
+print("{0:.1f}".format(float(a)))
+```
+
+<!-- String can not be converted to int and float, however this topic will be not covered in this tutorial. -->
+

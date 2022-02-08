@@ -1,0 +1,77 @@
+# Functions
+
+Functions are piece of code that help you to solve particular problem. We already saw in the previous chapter the function type() to verify the type of the variables and print() to print the results of a variables.
+
+## Basic functions
+
+Python has it own function such as max(), min() for example. In this case max() will give in output the maximum number of a list, without have it to calculate manually.
+
+output = function_name(input)
+
+```{r function, echo=FALSE, fig.cap='Python function'}
+
+knitr::include_graphics(rep("images/function.pdf"))
+```
+
+Calculate the maximum value of a list of a numeric variable.
+```{python, prompt = TRUE, comment=NA, results = 'hold'}
+x = [1.5, 2.3, 3.1, 9.4, 3]
+x_max=max(x)
+print(x_max)
+
+```
+
+To understand what a function does, use help(function_name). 
+
+```{python, prompt = TRUE, comment=NA}
+help(max)
+```
+
+Useful functions.
+
+len( ), give the length of the list x
+```{python, prompt = TRUE, comment=NA, results = 'hold'}
+print(len(x)) 
+```
+
+str( ), convert to string the elements of a list
+```{python, prompt = TRUE, comment=NA, results = 'hold'}
+print(str(x[2]))
+```
+
+int( ), convert to integer the second item
+```{python, prompt = TRUE, comment=NA, results = 'hold'}
+print(int(x[1])) 
+```
+
+float( ), Convert to float the last item
+```{python, prompt = TRUE, comment=NA, results = 'hold'}
+print(float(x[-1]))
+```
+
+## Create your own function.
+
+A function is a bloc of organized code that can be reusable for one single action or multiple times. To define a function you need to provide the requirement to obtains an output. A function block start with the keyword **def** followed by function name and the input parameters inside parenthesis as:
+
+```{python, eval = FALSE,  comment=NA, results = 'hold'}
+def function_name(parameters):
+    function_statment
+    return(expression)
+  
+```
+
+Example of basic sum function of two number:
+```{python, comment=NA, results = 'hold'}
+def add(a,b):
+    s = a+b
+    return(s)
+```
+
+
+After defining the function is possible to call it like this:
+```{python, prompt = TRUE, comment=NA, results = 'hold'}
+x = add(2,3)
+print(x)
+
+```
+

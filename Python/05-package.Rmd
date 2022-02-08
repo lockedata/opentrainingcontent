@@ -1,0 +1,48 @@
+# Packages
+
+Packages are a directory of python scripts. Each script is a module, which specify functions, methods and types.
+The principal packages for data science are:
+
+- NumPy, for mathematical operation
+
+- Matplotlib, for visualisation
+
+- Pandas, for data manipulation
+
+- Scikit-learn, for machine learning algorithms.
+
+
+To use the python packages in your code, you have first to install it in your system, using pip (package maintenance system for python) or with anaconda.
+
+To get pip
+
+- python3 get-pip.py
+
+To install for example NumPy, from terminal type:
+
+- pip3 install numpy
+
+To use NumPy you have to import this package in your python script. In this example we call a NumPy array, for the moment we can say that is a sort of list, we will see in details array in the next chapter.
+
+Import the numpy package and use the function array.
+```{python, prompt = TRUE, comment=NA}
+import numpy            
+# array function
+numpy.array([1,2,3])
+```
+
+Import  NumPy using 'as' to have a short name for numpy and call the same function array.
+```{python, prompt = TRUE, comment=NA}
+import numpy as np      
+np.array([1,2,3])
+
+```
+In the second case we do not neewd to write the name of the package but use the alias.
+
+It is also possible to import a specific function from the package without import all of them. In the example we will import only the function array.
+
+```{python, prompt = TRUE, comment=NA}
+from numpy import array
+array([1,2,3])
+```
+

@@ -1,0 +1,179 @@
+# Lists
+
+List are an ensemble of variable separated by comma enclosed in square brackets. A list is declared using [ ] following by the variable name: 
+
+<!-- \begin{equation} -->
+$list = [i_{0}, i_{1}, ..., i_{n}]$
+<!-- \end{equation} -->
+
+The index i of a list start from 0.
+
+A list can contains different kind of types, such as int, float, string:
+
+```{python, prompt = TRUE, comment=NA}
+list1 = [1,2,3]                          ## list of integer
+list2 = [2.3, 4.5, 7.2]                  ## list of float
+list3 = ['moon', 'sun', 'star']          ## list of strings
+list4 = ['moon', 1.737, 'sun', 6.9, 25]  ## list with differents types
+```
+
+if we check the types of variables stored in a list we can see:
+
+```{python, prompt = TRUE, comment=NA}
+print(list3)
+print(type(list3))
+print(type(list3[0]))
+```
+
+The elements of a list can be acces using the slice operator [ ] as we already seen for string. 
+
+## Subset a list
+
+Select an item at index = 1, which correspond to the second item of the list.
+```{python, echo= TRUE , prompt = TRUE, comment=NA, results = 'hold'}
+print(list4[1])
+```
+
+Select the third last item.
+```{python, echo= TRUE , prompt = TRUE, comment=NA, results = 'hold'}
+print(list4[-3]) 
+```
+
+## Slice a list
+
+Items from index 1 to index 3.
+```{python, echo= TRUE , prompt = TRUE, comment=NA, results = 'hold'}
+print(list4[1:3]) 
+```
+
+Items after index 0.
+```{python, echo= TRUE , prompt = TRUE, comment=NA, results = 'hold'}
+print(list4[1:])  
+```
+
+Items before index 2.
+```{python, echo= TRUE , prompt = TRUE, comment=NA, results = 'hold'}
+print(list4[:2])
+```
+The whole list.
+```{python, echo= TRUE , prompt = TRUE, comment=NA, results = 'hold'}
+print(list4[:])   
+```
+
+## List of lists
+A list could also be contains another list.
+
+\begin{equation}
+list[list] = [[l1_{0}, l1_{1}, ..., l1_{n}], [l2_{0}, l2_{1}, ... , l2_{n} ], ...[li_{0}, li_{1}, ..., li_{n}]]
+\end{equation}
+
+where l is the element, i is the index and n is the n-index of the elements of the list.
+
+```{python, prompt = TRUE, comment=NA, , results = 'hold'}
+list = [list1, list2, list3]
+print(list)
+```
+
+Subset a list of a lists.
+Select the first element of the second list $l2_{0}$
+
+```{python, echo= TRUE , prompt = TRUE, comment=NA}
+print(list[1][0])   
+```
+
+Select all the elements before index 2 of the second list, $l2_{0}$, $l2_{1}$.
+
+```{python, echo= TRUE , prompt = TRUE, comment=NA}
+print(list[1][:2])   
+```
+
+## List manipulations and methods
+
+Some basic list manipulation are described in the examples below.
+
+Change the last value of the list.
+```{python, echo= TRUE , prompt = TRUE, comment=NA}
+list4[3] = 23 
+print(list4)
+```
+
+Add another list to the existing list4.
+```{python, echo= TRUE , prompt = TRUE, comment=NA}
+list4 + ['red star', 35] 
+print(list4)
+```
+
+Delete items in the range of index (0,1).
+```{python, echo= TRUE , prompt = TRUE, comment=NA}
+del(list4[0:1])     
+print(list4)
+```
+
+
+As for string also the list has a set of built-in methods. Methods are functions specific to python object, in this case the object is the list.
+
+Get the index of the selected item. 
+```{python, echo= TRUE , prompt = TRUE, comment=NA}
+print(list4.index('sun')) 
+```
+
+Count the number of time the item is in the list.
+```{python, echo= TRUE , prompt = TRUE, comment=NA}
+print(list4.count('sun')) 
+```
+
+Add an item to the end of the list.
+```{python, echo= TRUE , prompt = TRUE, comment=NA}
+list4.append('?')  
+print(list4)
+```
+
+Remove a selected item
+```{python, echo= TRUE , prompt = TRUE, comment=NA}
+list4.remove('?')   
+print(list4)
+```
+
+Reverse the order of the list.
+```{python, echo= TRUE , prompt = TRUE, comment=NA}
+list4.reverse()     
+print(list4)
+```
+
+Extend the list by appending the item.
+```{python, echo= TRUE , prompt = TRUE, comment=NA}
+list4.extend('!')  
+print(list4)
+```
+
+Remove an item at a given position in the list, -1 is the last element of the list.
+```{python, echo= TRUE , prompt = TRUE, comment=NA}
+list4.pop(-1)      
+print(list4) 
+```
+
+Insert an item at a given position: the first argument is the index and the second is the item to insert.
+```{python, echo= TRUE , prompt = TRUE, comment=NA}
+list4.insert(0, '&')  
+print(list4)
+```
+
+Sort the list
+```{python, echo= TRUE , prompt = TRUE, comment=NA}
+list4.sort()          
+print(list4)
+
+```
+
+### Copy a list
+
+The elements of a list are allocated in the memory. To make a copy of a list and modify some value is necessary to create a new list that does not point to the existing one. To create a copy of the list can used the operator [:]
+
+```{python, echo= TRUE , prompt = TRUE, comment=NA}
+x = [1,2,4] 
+# Create a copy of the list x
+y = x[:]
+y[1] = 5
+print(y)
+```
+

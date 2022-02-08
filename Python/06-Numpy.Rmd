@@ -1,0 +1,466 @@
+<!-- `r if (knitr::is_html_output()) ' -->
+<!-- # References {-} -->
+<!-- '` -->
+# NumPy
+
+NumPy (Numeric Python) package is wide used for scientific computing. It provides arrays, which are an efficient alternative to python list. Python does not know how to make calculation with list and the arrays allow to operate mathematical calculations. NumPy provides calculation over the entire array that is easy and fast.
+The NumPy library is imported usually at the beginning of your code, as we seen in the previous chapter.
+
+```{python, prompt = TRUE, comment=NA}
+import numpy as np
+```
+
+
+## Arrays 
+Arrays are very important to solve data science and mathematical problems and are wide used in programming.
+It easy to perform calculation because NumPy array contains all elements with the same type. The type is assigned to the entire array and not to the single value as for the list. There are three types of arrays as can be seen in Figure \@ref(fig:array): mono-dimensional (1d) \@ref(fig:array) (a), bi-dimensional (2d) \@ref(fig:array) (b), three-dimensional (3d) \@ref(fig:array) (c). In the 2D array axis = 0 indicate the column and axis = 1 the row. I tn 3D array there is also axis = 2 that indicate the third dimension of the array. As for list and string the index start at 0. We will see with some example on how axis work.
+
+```{r array, echo=FALSE, fig.cap='NumPy array. (a): one-dimensional array. (b): two-dimensional array. (c): three-dimensional array'}
+
+knitr::include_graphics(rep("images/array.pdf"))
+```
+
+Creating arrays in 1,2 and 3-dimensions.
+```{python, prompt = TRUE, comment=NA}
+oneD = np.array([2, 3.5])
+print(oneD)
+twoD = np.array([(1.2, 6.4), (2, 5)], dtype = float)
+print(twoD)
+```
+
+We can observe that the three dimensional array in the example below is composed of two-dimensional arrays: 3D = [2D, 2D]. The first 2D array is [(1.2, 6.4), (2, 5)] and the second is [(3, 4), (5, 9)]. 
+
+```{python, prompt = TRUE, comment=NA}
+threeD = np.array([[(1.2, 6.4), (2, 5)], [(3, 4), (5, 9)]], dtype = float)
+print(threeD)
+```
+
+Now that we create these arrays we could start to understand how to use the axis highlighted in Figure \@ref(fig:array). We will take twoD and threeD arrays and sum over the axis.
+
+Sum over axis 0,  will output the sum of the elements of the columns.
+```{python, prompt = TRUE, comment=NA}
+print(twoD.sum(axis=0))
+```
+
+Sum over axis 1, will output the sum of the elements of the rows.
+```{python, prompt = TRUE, comment=NA}
+print(twoD.sum(axis=1))
+```
+
+If we imagine that this array is compose of two 2D arrays the sum over the axis 0 will be done as follow. Sum on the first element of the first row of the first 2D array with the first element of the first row of the second 2D array. The second element will be the second element of the first row of the first 2D array with the second element of the first row of the second 2D array.
+
+```{python, prompt = TRUE, comment=NA}
+print(threeD.sum(axis = 0)) # [1.2 3] = 4.2, [6.4 4] = 10.4
+```
+
+Sum over axis 1, will output in the first row the sum of column of the first array and for the second row is the sum of the column of the second array.
+```{python, prompt = TRUE, comment=NA}
+print(threeD.sum(axis = 1))
+```
+
+Sum over axis 2 is the sum of the row of the arrays.
+```{python, prompt = TRUE, comment=NA}
+print(threeD.sum(axis = 2))
+```
+
+## Creating arrays
+Sometimes we need  to create empty array, or array with zeros for example, depending of what is the aim of our code. Below some example on how to create arrays.
+Create a 2D array of zero, with shape (3,4), 3 row and 4 columns
+
+```{python, prompt = TRUE, comment=NA}
+zero_array = np.zeros((3,4))
+print(zero_array)
+```
+
+Create a 3D array will all value equal 1.
+
+```{python, prompt = TRUE, comment=NA}
+one_array = np.ones((2, 3,4))
+print(one_array)
+```
+
+Create a 5x5 identity matrix will all 1 in the diagonal and with the other elements 0.
+```{python, prompt = TRUE, comment=NA}
+identity = np.eye(5)
+print(identity)
+```
+
+Create a 1D array with a sequence of 6 numbers with evenly divided values from 0 to 60.
+
+```{python, prompt = TRUE, comment=NA}
+seq_array = np.linspace(0,60,6) 
+print(seq_array)
+```
+
+Create an array filled with random number.
+
+```{python, prompt = TRUE, comment=NA}
+random = np.random.random((2,2)) 
+print(random)
+```
+
+The function np.empty() generate an array without initialize its values to any particular value. Is important to observe that empty() will not return an array of zeros but an uninitialized garbage of values, as shown in the example.
+
+```{python, prompt = TRUE, comment=NA}
+empty = np.empty((3,2)) 
+print(empty)
+```
+
+## Input and output with NumPy arrays.
+
+After the array is created you could save it to a text file (.txt). You can also open the file that contains array.
+
+To save the array in a text.
+
+```{python, prompt = TRUE, comment=NA}
+np.savetxt('oned.txt', oneD, delimiter = ' ')
+```
+
+Open the saved text file.
+```{python, prompt = TRUE, comment=NA, eval = TRUE}
+np.loadtxt('oned.txt')
+```
+
+## Array properties
+
+In this paragraph we will inspect the property of an array as for example to inspect the dimension or the type of elements of the array.
+
+Check the array dimension using the function shape, rows by columns.
+
+```{python, prompt = TRUE, comment=NA, eval = TRUE}
+print(twoD.shape)
+```
+
+Length of an array using len()
+
+```{python, prompt = TRUE, comment=NA, eval = TRUE}
+print(len(twoD))
+```
+
+Inspect the size of the array with the function size, which returns the numbers of elements.
+
+```{python, prompt = TRUE, comment=NA, eval = TRUE}
+print(twoD.size)
+```
+
+Check the number of dimension using ndim.
+```{python, prompt = TRUE, comment=NA}
+print(twoD.ndim)
+```
+
+Check the type of element in the array.
+```{python, prompt = TRUE, comment=NA, eval = TRUE}
+print(twoD.dtype)
+```
+
+### Conversion of arrays.
+
+It is possible to operate the conversion of an array, as change the type of the elements or convert a list.
+
+Convert array elements to type dtype as int, float,...
+```{python, prompt = TRUE, comment=NA, eval = TRUE}
+print(twoD.astype(int))
+```
+
+Convert array to a Python list.
+
+```{python, prompt = TRUE, comment=NA}
+print(twoD.tolist())
+
+```
+
+## Mathematical operation with arrays.
+
+NumPy is a very good library for mathematical operation and the arrays are very useful to this purpose. We will explore some basic operation.
+
+### Arithmetic
+Subtraction and addition between a 1D and 2D arrays, can be done in two way or using the operator - / + or using np.subtract() and np.add().
+
+```{python, prompt = TRUE, comment=NA}
+sub = oneD - twoD
+print(sub)
+sub2 = np.subtract(oneD, twoD)
+print(sub2)
+ad = oneD + twoD
+print(ad)
+ad2 = np.add(oneD, twoD)
+print(ad2)
+```
+
+Division and multiplication can be performed using the operators '/' and '*' or with np.divide() and np.multiply()
+
+```{python, prompt = TRUE, comment=NA}
+div = oneD/twoD
+print(oneD)
+div2 = np.divide(oneD, twoD)
+print(div2)
+mul = oneD*twoD
+print(mul)
+mul2 = np.multiply(oneD, twoD)
+print(mul2)
+```
+
+
+Other operations:
+exponential.
+```{python, prompt = TRUE, comment=NA}
+exp = np.exp(oneD)
+print(exp)
+```
+square root.
+```{python, prompt = TRUE, comment=NA}
+sqrt = np.sqrt(oneD)
+print(sqrt)
+```
+sine. 
+```{python, prompt = TRUE, comment=NA}
+sin = np.sin(oneD)
+print(sin)
+```
+
+cosines.
+```{python, prompt = TRUE, comment=NA}
+cos = np.cos(oneD)
+print(cos)
+```
+
+logarithm.
+```{python, prompt = TRUE, comment=NA}
+log = np.log(oneD)
+print(log)
+```
+
+### Comparision
+
+To compare arrays is used the operator == or the function np.array_equal and is possible to compare like element-wise and array-wise.
+
+```{python, prompt = TRUE, comment=NA}
+print(oneD == twoD)
+array_wise = np.array_equal(oneD,twoD)
+print(array_wise)
+
+```
+
+### Aggregate functions
+
+The principal array aggregate functions are listed below.
+Array-wise sum.
+```{python, prompt = TRUE, comment=NA}
+sum_agg = oneD.sum()
+print(sum_agg)
+```
+
+Array-wise minimum value.
+```{python, prompt = TRUE, comment=NA}
+min_agg =  oneD.min()
+print(min_agg)
+```
+
+The maximum value of array can be calculated or per row (axis = 0) or per column (axis = 1).
+
+```{python, prompt = TRUE, comment=NA}
+max_row = twoD.max(axis=0)
+print(max_row)
+max_col = twoD.max(axis=1)
+print(max_col)
+```
+
+The cumulative sum of the elements is calculated using the function cumsum(), can be determinate over the axis 0 and the axis 1 of the array.
+```{python, prompt = TRUE, comment=NA}
+cumsum_col = twoD.cumsum(axis=1)
+print(cumsum_col)
+
+```
+
+Other useful statistical functions are mean, median, standard deviation and correlation coefficient.
+```{python, prompt = TRUE, comment=NA}
+mean = oneD.mean()
+print(mean)
+median = np.median(oneD)
+print(median)
+std = np.std(twoD)
+print(std)
+cc = np.corrcoef(twoD)
+print(cc)
+```
+
+## Copying and sorting arrays
+### Copyng array
+Create a view of the array with the same data
+```{python, prompt = TRUE, comment=NA}
+view = oneD.view()
+print(view)
+```
+Create a copy of the array
+```{python, prompt = TRUE, comment=NA}
+oneD_copy = np.copy(oneD)
+print(oneD_copy)
+```
+Create a deep copy of the array
+```{python, prompt = TRUE, comment=NA}
+h = oneD.copy()
+print(h)
+```
+
+### Sorting array
+
+To sort the element of an array use the function sort().
+```{python, prompt = TRUE, comment=NA}
+# create an array
+a = np.array([8,4,9,34,21,0,5])
+# sort the array
+a_sort = np.sort(a)
+print(a_sort)
+
+```
+
+## Subsetting and slicing array
+
+Subsetting and slicing operation are very similar to what we already seen for list and strings.
+
+### Subsetting
+Figure \@ref(fig:subsetting) shown how is performed the operation of array's subsetting.
+
+```{r subsetting, echo=FALSE, fig.cap='Subsetting NumPy array. (a) 1D array, selection of the element with index 2. (b) Selection of the element with index (1,1)'}
+
+knitr::include_graphics(rep("images/subsetting.pdf"))
+```
+
+```{python, prompt = TRUE, comment=NA}
+oneD_0 = oneD[0]
+print(oneD_0)
+twoD_1_0 = twoD[1,1]
+print(twoD_1_0)
+
+```
+
+### Slicing
+
+Figure \@ref(fig:slicing) represents how to slice 1D and 2D arrays. The first element before commas indicate the row and the second elements the column.
+```{r slicing, echo=FALSE, fig.cap='Slicing NumPy array. The numbers indicate the index of each array positions. (a) slicing the first two elements of 1D array. (b) Slicing the second column of a 2D array.'}
+knitr::include_graphics(rep("images/slicing.pdf"))
+```
+
+The operator [ : ] slices from start to end.
+```{python, prompt = TRUE, comment=NA}
+print(twoD[:,:])
+```
+
+Select elements at rows 0 and 1 and column 1.
+```{python, prompt = TRUE, comment=NA}
+print(twoD[0:2,1]) 
+
+```
+
+Select all elements at row 0
+```{python, prompt = TRUE, comment=NA}
+print(twoD[:1])
+```
+
+Select elements at row 1 and columns 0 and 1
+```{python, prompt = TRUE, comment=NA}
+print(twoD[1,:2])
+```
+
+## Array Manipulation
+
+There are different operations that can be performed to manipulate arrays. In this paragraph we will see some of them.
+
+### Transpose operation
+
+To transpose an array can be used the function np.transpose().
+```{python, prompt = TRUE, comment=NA}
+transp = np.transpose(twoD)
+print(transp)
+```
+
+The transposition of an array can be also performed using array.T.
+```{python, prompt = TRUE, comment=NA}
+b = transp.T
+print(b)
+```
+
+### Changing shape
+To change the shape of an array could be used the array.ravel() function, who flattened the dimension of the array, for example from 2D to 1D array.
+To modify the shape following particular conditions, is possible to use array.reshape(n,m) with n number or rows and m number of columns.
+
+```{python, prompt = TRUE, comment=NA}
+ravel = twoD.ravel()
+print(ravel)
+reshape = twoD.reshape(1,-2)
+print(reshape)
+```
+
+### Adding and removing elements.
+
+To append elements to an existing array use the function append(). For example append a second array to the first one.
+```{python, prompt = TRUE, comment=NA}
+app = np.append(oneD, twoD)
+print(app)
+```
+
+To insert elements in an array use insert().
+```{python, prompt = TRUE, comment=NA}
+ins = np.insert(threeD, 1, 4)
+print(ins)
+```
+
+To delete elements in an array use delete().
+```{python, prompt = TRUE, comment=NA}
+del_1 = np.delete(twoD, [1]) 
+print(del_1)
+
+```
+
+### Combining arrays
+
+Different arrays can be concatenated among them.
+
+```{python, prompt = TRUE, comment=NA}
+a = np.array([(2, 4), (3.2, 7.6)], dtype = float)
+new_conc = np.concatenate((a, twoD), axis = 0)
+print(new_conc)
+```
+
+To stack an arrays vertically (row-wise) use np.vstack((array1, array2),
+```{python, prompt = TRUE, comment=NA}
+
+vstack = np.vstack((a, twoD))
+print(vstack)
+```
+
+We can stack arrays vertically also with np.r_[array1, array2]
+```{python, prompt = TRUE, comment=NA}
+v_stack = np.r_[a, twoD]
+print(v_stack)
+```
+
+To stack arrays horizontally (columns-wise), use hstack((array1, array2)
+```{python, prompt = TRUE, comment=NA}
+hstack = np.hstack((a, twoD))
+print(hstack)
+```
+
+Created stacked column-wise arrays using np.column_stack((array1, array2)).
+```{python, prompt = TRUE, comment=NA}
+cl_stack = np.column_stack((a,twoD))
+print(cl_stack)
+```
+
+We can stack column-wise arrays also with np.c_[array1, array2]
+```{python, prompt = TRUE, comment=NA}
+col_stack = np.c_[a, twoD]
+print(col_stack)
+```
+
+<!-- ### Splitting arrays -->
+
+<!-- The arrays can be splitted Split array horizontally at the second index. -->
+<!-- ```{python, prompt = TRUE, comment=NA} -->
+<!-- a_2 = np.hsplit(a,2) -->
+<!-- print(a_2) -->
+<!-- ``` -->
+
+
+
+
